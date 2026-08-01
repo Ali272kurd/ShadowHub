@@ -1,0 +1,1286 @@
+-- ==================================================
+-- REDDIEHUB v24.0 - ULTIMATE HvH EDITION
+-- Terminal Style • HvH Aesthetic • Perfect ESP
+-- ==================================================
+
+-- Safety pcall for all operations
+local success, err = pcall(function()
+
+print("Loading ReddieHub v24.0 HvH Edition...")
+
+-- Disable broken game script
+pcall(function()
+    local replicatedFirst = game:GetService("ReplicatedFirst")
+    local actor = replicatedFirst:FindFirstChild("Actor")
+    if actor then
+        local script = actor:FindFirstChild("LocalScript")
+        if script then
+            script.Disabled = true
+        end
+    end
+end)
+
+task.wait(0.5)
+
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+if not player then
+    repeat task.wait() until Players.LocalPlayer
+    player = Players.LocalPlayer
+end
+
+repeat task.wait() until player and player.Character
+print("Player loaded!")
+
+-- ==================================================
+-- HvH TERMINAL COLORS
+-- ==================================================
+
+local C = {
+    primary = Color3.fromRGB(0, 255, 70),          -- Neon Green (Terminal)
+    primaryDark = Color3.fromRGB(0, 180, 40),
+    primaryGlow = Color3.fromRGB(50, 255, 100),
+    secondary = Color3.fromRGB(0, 200, 255),       -- Cyan
+    secondaryGlow = Color3.fromRGB(50, 220, 255),
+    accent = Color3.fromRGB(255, 200, 0),          -- Gold
+    accentGlow = Color3.fromRGB(255, 215, 50),
+    dark = Color3.fromRGB(0, 0, 0),
+    bg = Color3.fromRGB(4, 4, 8),
+    panel = Color3.fromRGB(8, 8, 14),
+    panelLight = Color3.fromRGB(14, 14, 24),
+    text = Color3.fromRGB(0, 255, 70),
+    dim = Color3.fromRGB(80, 80, 100),
+    green = Color3.fromRGB(0, 255, 80),
+    gold = Color3.fromRGB(255, 215, 0),
+    blue = Color3.fromRGB(60, 160, 255),
+    red = Color3.fromRGB(255, 40, 40),
+    purple = Color3.fromRGB(190, 60, 255),
+    pink = Color3.fromRGB(255, 80, 180),
+    cyan = Color3.fromRGB(0, 255, 255),
+    orange = Color3.fromRGB(255, 150, 0),
+    glass = Color3.fromRGB(255, 255, 255),
+}
+
+local function notify(msg, dur)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "🟢 ReddieHub HvH",
+            Text = tostring(msg),
+            Duration = dur or 3
+        })
+    end)
+end
+
+-- ==================================================
+-- SCREEN GUI
+-- ==================================================
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ReddieHub"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+print("ScreenGui created!")
+
+-- ==================================================
+-- TERMINAL STROKE HELPER
+-- ==================================================
+
+local function addTerminalStroke(obj, thickness)
+    thickness = thickness or 1.5
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness
+    stroke.Color = C.primary
+    stroke.Transparency = 0.3
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = obj
+    return stroke
+end
+
+local function addGlowStroke(obj, thickness)
+    thickness = thickness or 2
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness
+    stroke.Color = C.primaryGlow
+    stroke.Transparency = 0.6
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = obj
+    return stroke
+end
+
+-- ==================================================
+-- MOUSE TRACKING
+-- ==================================================
+
+local mouse = {X = 0, Y = 0}
+pcall(function()
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            mouse.X = input.Position.X
+            mouse.Y = input.Position.Y
+        end
+    end)
+end)
+
+-- ==================================================
+-- LOADING SCREEN - Terminal Style
+-- ==================================================
+
+local loadingScreenGui = Instance.new("ScreenGui")
+loadingScreenGui.Name = "LoadingScreen"
+loadingScreenGui.ResetOnSpawn = false
+loadingScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+loadingScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Background
+local loadingBg = Instance.new("Frame")
+loadingBg.Size = UDim2.new(1, 0, 1, 0)
+loadingBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+loadingBg.BorderSizePixel = 0
+loadingBg.Parent = loadingScreenGui
+
+-- Terminal background effect
+local termBg = Instance.new("Frame")
+termBg.Size = UDim2.new(1, 0, 1, 0)
+termBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+termBg.BackgroundTransparency = 0.1
+termBg.BorderSizePixel = 0
+termBg.Parent = loadingBg
+
+-- Scanlines
+local scanlines = Instance.new("Frame")
+scanlines.Size = UDim2.new(1, 0, 1, 0)
+scanlines.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+scanlines.BackgroundTransparency = 0.7
+scanlines.BorderSizePixel = 0
+scanlines.Parent = loadingBg
+
+task.spawn(function()
+    while scanlines and scanlines.Parent do
+        scanlines.BackgroundTransparency = 0.6 + math.random() * 0.3
+        task.wait(0.05)
+    end
+end)
+
+-- Title - Terminal style
+local glitchTitle = Instance.new("TextLabel")
+glitchTitle.Size = UDim2.new(0, 500, 0, 60)
+glitchTitle.Position = UDim2.new(0.5, -250, 0.2, 0)
+glitchTitle.BackgroundTransparency = 1
+glitchTitle.Text = "$ REDDIEHUB v24.0"
+glitchTitle.TextColor3 = C.primaryGlow
+glitchTitle.TextSize = 44
+glitchTitle.Font = Enum.Font.Code
+glitchTitle.TextXAlignment = Enum.TextXAlignment.Center
+glitchTitle.TextStrokeTransparency = 0.2
+glitchTitle.Parent = loadingBg
+
+-- Subtitle
+local subTitle = Instance.new("TextLabel")
+subTitle.Size = UDim2.new(0, 400, 0, 24)
+subTitle.Position = UDim2.new(0.5, -200, 0.2, 68)
+subTitle.BackgroundTransparency = 1
+subTitle.Text = ">> TERMINAL MODE: ACTIVE <<"
+subTitle.TextColor3 = C.primary
+subTitle.TextSize = 14
+subTitle.Font = Enum.Font.Code
+subTitle.TextXAlignment = Enum.TextXAlignment.Center
+subTitle.Parent = loadingBg
+
+-- Avatar - Terminal style
+local avatar = Instance.new("ImageLabel")
+avatar.Size = UDim2.new(0, 100, 0, 100)
+avatar.Position = UDim2.new(0.5, -50, 0.42, -50)
+avatar.BackgroundTransparency = 1
+avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=420&h=420"
+avatar.Parent = loadingBg
+local avatarCorner = Instance.new("UICorner")
+avatarCorner.CornerRadius = UDim.new(0, 18)
+avatarCorner.Parent = avatar
+local avatarStroke = Instance.new("UIStroke")
+avatarStroke.Thickness = 2
+avatarStroke.Color = C.primary
+avatarStroke.Transparency = 0.2
+avatarStroke.Parent = avatar
+
+-- Name
+local nameLabel = Instance.new("TextLabel")
+nameLabel.Size = UDim2.new(0, 300, 0, 24)
+nameLabel.Position = UDim2.new(0.5, -150, 0.42, 58)
+nameLabel.BackgroundTransparency = 1
+nameLabel.Text = player.Name
+nameLabel.TextColor3 = C.text
+nameLabel.TextSize = 18
+nameLabel.Font = Enum.Font.Code
+nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+nameLabel.Parent = loadingBg
+
+-- TikTok
+local tiktokLabel = Instance.new("TextLabel")
+tiktokLabel.Size = UDim2.new(0, 300, 0, 20)
+tiktokLabel.Position = UDim2.new(0.5, -150, 0.42, 85)
+tiktokLabel.BackgroundTransparency = 1
+tiktokLabel.Text = "$ follow tiktok: .vfsv"
+tiktokLabel.TextColor3 = C.primary
+tiktokLabel.TextSize = 12
+tiktokLabel.Font = Enum.Font.Code
+tiktokLabel.TextXAlignment = Enum.TextXAlignment.Center
+tiktokLabel.Parent = loadingBg
+
+-- Loading bar - Terminal style
+local loadContainer = Instance.new("Frame")
+loadContainer.Size = UDim2.new(0, 350, 0, 10)
+loadContainer.Position = UDim2.new(0.5, -175, 0.7, 0)
+loadContainer.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+loadContainer.BorderSizePixel = 0
+loadContainer.Parent = loadingBg
+local loadContainerCorner = Instance.new("UICorner")
+loadContainerCorner.CornerRadius = UDim.new(0, 5)
+loadContainerCorner.Parent = loadContainer
+addTerminalStroke(loadContainer, 1)
+
+local loadFill = Instance.new("Frame")
+loadFill.Size = UDim2.new(0, 0, 1, 0)
+loadFill.BackgroundColor3 = C.primary
+loadFill.BorderSizePixel = 0
+loadFill.Parent = loadContainer
+local loadFillCorner = Instance.new("UICorner")
+loadFillCorner.CornerRadius = UDim.new(0, 5)
+loadFillCorner.Parent = loadFill
+
+-- Percentage
+local loadPercent = Instance.new("TextLabel")
+loadPercent.Size = UDim2.new(0, 80, 0, 22)
+loadPercent.Position = UDim2.new(0.5, -40, 0.7, 24)
+loadPercent.BackgroundTransparency = 1
+loadPercent.Text = "0%"
+loadPercent.TextColor3 = C.primary
+loadPercent.TextSize = 20
+loadPercent.Font = Enum.Font.Code
+loadPercent.TextXAlignment = Enum.TextXAlignment.Center
+loadPercent.Parent = loadingBg
+
+-- Loading subtitle
+local loadingSub = Instance.new("TextLabel")
+loadingSub.Size = UDim2.new(0, 400, 0, 18)
+loadingSub.Position = UDim2.new(0.5, -200, 0.7, 50)
+loadingSub.BackgroundTransparency = 1
+loadingSub.Text = "> initializing..."
+loadingSub.TextColor3 = C.primary
+loadingSub.TextSize = 12
+loadingSub.Font = Enum.Font.Code
+loadingSub.TextXAlignment = Enum.TextXAlignment.Center
+loadingSub.Parent = loadingBg
+
+local loadingMessages = {
+    "> initializing...",
+    "> loading modules...",
+    "> bypassing security...",
+    "> decrypting data...",
+    "> injecting payload...",
+    "> system ready."
+}
+
+-- ==================================================
+-- TERMINAL BUTTON STYLE
+-- ==================================================
+
+local function terminalButton(parent, text, cb, color)
+    color = color or C.primary
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, 0, 0, 34)
+    b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    b.BackgroundTransparency = 0.3
+    b.BorderSizePixel = 0
+    b.Text = text
+    b.TextColor3 = color
+    b.TextSize = 12
+    b.Font = Enum.Font.Code
+    b.Parent = parent
+    
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 6)
+    bCorner.Parent = b
+    addTerminalStroke(b, 1.5)
+    
+    b.MouseButton1Click:Connect(function()
+        pcall(cb)
+    end)
+    b.MouseEnter:Connect(function()
+        b.BackgroundColor3 = Color3.fromRGB(0, 255, 70)
+        b.BackgroundTransparency = 0.1
+        b.TextColor3 = Color3.fromRGB(0, 0, 0)
+    end)
+    b.MouseLeave:Connect(function()
+        b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        b.BackgroundTransparency = 0.3
+        b.TextColor3 = color
+    end)
+    return b
+end
+
+local function terminalToggle(parent, text, default, cb)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, 34)
+    f.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    f.BackgroundTransparency = 0.3
+    f.BorderSizePixel = 0
+    f.Parent = parent
+    
+    local fCorner = Instance.new("UICorner")
+    fCorner.CornerRadius = UDim.new(0, 6)
+    fCorner.Parent = f
+    addTerminalStroke(f, 1.5)
+    
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -60, 1, 0)
+    l.Position = UDim2.new(0, 10, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = C.text
+    l.TextSize = 12
+    l.Font = Enum.Font.Code
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Parent = f
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 40, 0, 22)
+    btn.Position = UDim2.new(1, -46, 0.5, -11)
+    btn.BackgroundColor3 = default and C.primary or Color3.fromRGB(30, 30, 30)
+    btn.BorderSizePixel = 0
+    btn.Text = default and "ON" or "OFF"
+    btn.TextColor3 = default and Color3.fromRGB(0, 0, 0) or C.dim
+    btn.TextSize = 10
+    btn.Font = Enum.Font.Code
+    btn.Parent = f
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+    addTerminalStroke(btn, 1)
+    
+    local state = default or false
+    
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and C.primary or Color3.fromRGB(30, 30, 30)
+        btn.Text = state and "ON" or "OFF"
+        btn.TextColor3 = state and Color3.fromRGB(0, 0, 0) or C.dim
+        pcall(cb, state)
+    end)
+    
+    return {get = function() return state end, set = function(v) state = v end}
+end
+
+local function terminalSlider(parent, text, min, max, def, suffix, cb)
+    suffix = suffix or ""
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, 44)
+    f.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    f.BackgroundTransparency = 0.3
+    f.BorderSizePixel = 0
+    f.Parent = parent
+    
+    local fCorner = Instance.new("UICorner")
+    fCorner.CornerRadius = UDim.new(0, 6)
+    fCorner.Parent = f
+    addTerminalStroke(f, 1.5)
+    
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -16, 0, 18)
+    l.Position = UDim2.new(0, 10, 0, 2)
+    l.BackgroundTransparency = 1
+    l.Text = text .. ": " .. tostring(def) .. suffix
+    l.TextColor3 = C.text
+    l.TextSize = 11
+    l.Font = Enum.Font.Code
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Parent = f
+    
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, -24, 0, 3)
+    bg.Position = UDim2.new(0, 12, 0, 28)
+    bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    bg.BorderSizePixel = 0
+    bg.Parent = f
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 2)
+    bgCorner.Parent = bg
+    
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((def-min)/(max-min), 0, 1, 0)
+    fill.BackgroundColor3 = C.primary
+    fill.BorderSizePixel = 0
+    fill.Parent = bg
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 2)
+    fillCorner.Parent = fill
+    
+    local val = def
+    local valueInput = Instance.new("TextBox")
+    valueInput.Size = UDim2.new(0, 44, 0, 20)
+    valueInput.Position = UDim2.new(1, -52, 0, 0)
+    valueInput.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    valueInput.Text = tostring(def)
+    valueInput.TextColor3 = C.text
+    valueInput.TextSize = 11
+    valueInput.Font = Enum.Font.Code
+    valueInput.TextXAlignment = Enum.TextXAlignment.Center
+    valueInput.BorderSizePixel = 0
+    valueInput.Parent = f
+    local valueCorner = Instance.new("UICorner")
+    valueCorner.CornerRadius = UDim.new(0, 3)
+    valueCorner.Parent = valueInput
+    addTerminalStroke(valueInput, 1)
+    
+    valueInput.FocusLost:Connect(function()
+        local num = tonumber(valueInput.Text)
+        if num then
+            num = math.clamp(num, min, max)
+            val = num
+            local rel = (num - min) / (max - min)
+            fill.Size = UDim2.new(rel, 0, 1, 0)
+            l.Text = text .. ": " .. tostring(math.floor(num*10)/10) .. suffix
+            pcall(cb, num)
+        end
+        valueInput.Text = tostring(math.floor(val*10)/10)
+    end)
+    
+    local function update(x)
+        pcall(function()
+            local rel = math.clamp((x - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+            fill.Size = UDim2.new(rel, 0, 1, 0)
+            val = min + (max - min) * rel
+            l.Text = text .. ": " .. tostring(math.floor(val*10)/10) .. suffix
+            valueInput.Text = tostring(math.floor(val*10)/10)
+            pcall(cb, val)
+        end)
+    end
+    
+    bg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            update(i.Position.X)
+        end
+    end)
+    
+    return {get = function() return val end, set = function(v) val = v end}
+end
+
+-- ==================================================
+-- TERMINAL SECTION
+-- ==================================================
+
+local function terminalSection(parent, text)
+    local s = Instance.new("Frame")
+    s.Size = UDim2.new(1, 0, 0, 26)
+    s.BackgroundTransparency = 1
+    s.BorderSizePixel = 0
+    s.Parent = parent
+    
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -10, 1, 0)
+    l.BackgroundTransparency = 1
+    l.Text = "$ " .. text
+    l.TextColor3 = C.primary
+    l.TextSize = 13
+    l.Font = Enum.Font.Code
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Position = UDim2.new(0, 10, 0, 0)
+    l.Parent = s
+    
+    local line = Instance.new("Frame")
+    line.Size = UDim2.new(1, 0, 0, 1)
+    line.Position = UDim2.new(0, 0, 1, -2)
+    line.BackgroundColor3 = C.primary
+    line.BackgroundTransparency = 0.3
+    line.BorderSizePixel = 0
+    line.Parent = s
+    
+    return s
+end
+
+-- ==================================================
+-- TELEPORT SYSTEM VARIABLES
+-- ==================================================
+
+local teleportSteps = 50
+local chosenPosition = nil
+local isChosen = false
+local isHolding = false
+local holdStartTime = 0
+
+-- ==================================================
+-- TELEPORT FUNCTIONS
+-- ==================================================
+
+local function teleportForward(steps)
+    pcall(function()
+        local char = player.Character
+        if not char then return end
+        
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        local lookVector = root.CFrame.LookVector
+        local newPos = root.Position + lookVector * steps
+        
+        local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(newPos)})
+        tween:Play()
+        tween.Completed:Wait()
+    end)
+end
+
+local function teleportToChosen()
+    if not chosenPosition or not isChosen then
+        notify("⚠️ No position chosen!", 2)
+        return
+    end
+    
+    pcall(function()
+        local char = player.Character
+        if not char then return end
+        
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(chosenPosition)})
+        tween:Play()
+        tween.Completed:Wait()
+        
+        notify("📍 Teleported to chosen position!", 2)
+    end)
+end
+
+-- ==================================================
+-- MAIN HUB - Terminal Style
+-- ==================================================
+
+local hub = Instance.new("Frame")
+hub.Size = UDim2.new(0, 500, 0, 550)
+hub.Position = UDim2.new(0.5, -250, 0.5, -275)
+hub.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+hub.BackgroundTransparency = 0.05
+hub.BorderSizePixel = 0
+hub.ClipsDescendants = true
+hub.Visible = false
+hub.Parent = screenGui
+
+local hc = Instance.new("UICorner")
+hc.CornerRadius = UDim.new(0, 12)
+hc.Parent = hub
+
+addTerminalStroke(hub, 2)
+addGlowStroke(hub, 2)
+
+-- Glass panel
+local glassPanel = Instance.new("Frame")
+glassPanel.Size = UDim2.new(1, 0, 1, 0)
+glassPanel.BackgroundColor3 = C.glass
+glassPanel.BackgroundTransparency = 0.96
+glassPanel.BorderSizePixel = 0
+glassPanel.Parent = hub
+local glassCorner = Instance.new("UICorner")
+glassCorner.CornerRadius = UDim.new(0, 12)
+glassCorner.Parent = glassPanel
+
+-- ==================================================
+-- HEADER
+-- ==================================================
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+header.BackgroundTransparency = 0.2
+header.BorderSizePixel = 0
+header.Parent = hub
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.Parent = header
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 30)
+title.Position = UDim2.new(0, 10, 0, 4)
+title.BackgroundTransparency = 1
+title.Text = "$ REDDIEHUB v24.0 // HvH TERMINAL"
+title.TextColor3 = C.primary
+title.TextSize = 16
+title.Font = Enum.Font.Code
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.Parent = header
+
+-- Status
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -20, 0, 18)
+statusText.Position = UDim2.new(0, 10, 0, 36)
+statusText.BackgroundTransparency = 1
+statusText.Text = "> STATUS: READY // USER: " .. player.Name
+statusText.TextColor3 = C.dim
+statusText.TextSize = 10
+statusText.Font = Enum.Font.Code
+statusText.TextXAlignment = Enum.TextXAlignment.Center
+statusText.Parent = header
+
+-- ==================================================
+-- TAB SYSTEM
+-- ==================================================
+
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, -20, 0, 32)
+tabContainer.Position = UDim2.new(0, 10, 0, 60)
+tabContainer.BackgroundTransparency = 1
+tabContainer.BorderSizePixel = 0
+tabContainer.Parent = hub
+
+local tabNames = {"TELEPORT", "ESP", "AIMBOT", "SETTINGS"}
+local tabBtns = {}
+local tabPages = {}
+
+for i, name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 112, 0, 28)
+    btn.Position = UDim2.new(0, (i-1)*116, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    btn.BackgroundTransparency = 0.4
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = C.dim
+    btn.TextSize = 11
+    btn.Font = Enum.Font.Code
+    btn.Parent = tabContainer
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+    addTerminalStroke(btn, 1)
+    
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, -20, 1, -110)
+    page.Position = UDim2.new(0, 10, 0, 98)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = C.primary
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.Visible = false
+    page.Parent = hub
+    
+    local pl = Instance.new("UIListLayout")
+    pl.Padding = UDim.new(0, 6)
+    pl.SortOrder = Enum.SortOrder.LayoutOrder
+    pl.Parent = page
+    
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 4)
+    padding.PaddingBottom = UDim.new(0, 8)
+    padding.Parent = page
+    
+    pl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        page.CanvasSize = UDim2.new(0, 0, 0, pl.AbsoluteContentSize.Y + 16)
+    end)
+    
+    tabBtns[i] = btn
+    tabPages[i] = page
+    
+    btn.MouseButton1Click:Connect(function()
+        for j, b in ipairs(tabBtns) do
+            b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            b.BackgroundTransparency = 0.4
+            b.TextColor3 = C.dim
+        end
+        btn.BackgroundColor3 = C.primary
+        btn.BackgroundTransparency = 0.1
+        btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        for j, p in ipairs(tabPages) do
+            p.Visible = (j == i)
+        end
+    end)
+end
+
+tabBtns[1].BackgroundColor3 = C.primary
+tabBtns[1].BackgroundTransparency = 0.1
+tabBtns[1].TextColor3 = Color3.fromRGB(0, 0, 0)
+tabPages[1].Visible = true
+
+-- ==================================================
+-- TAB 1: TELEPORT
+-- ==================================================
+
+local p1 = tabPages[1]
+
+terminalSection(p1, "TELEPORT CONTROL")
+
+-- Move Forward button
+local moveBtn = terminalButton(p1, "> MOVE FORWARD (TAP=50 / HOLD=SLOW)", function()
+    teleportForward(50)
+    notify("🚀 Teleported 50 steps forward!", 2)
+end)
+
+-- Hold functionality for move button
+pcall(function()
+    moveBtn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            isHolding = true
+            holdStartTime = tick()
+            -- Start slow movement
+            task.spawn(function()
+                while isHolding do
+                    teleportForward(2)
+                    task.wait(0.05)
+                end
+            end)
+        end
+    end)
+end)
+
+pcall(function()
+    moveBtn.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            isHolding = false
+        end
+    end)
+end)
+
+-- Steps slider
+local stepsSlider = terminalSlider(p1, "STEPS", 1, 200, 50, "", function(v)
+    teleportSteps = math.floor(v)
+end)
+
+terminalSection(p1, "CHOSEN POSITION")
+
+-- Choose button
+local chooseBtn = terminalButton(p1, "> CHOOSE POSITION", function()
+    pcall(function()
+        local char = player.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                chosenPosition = root.Position
+                isChosen = true
+                chooseBtn.Text = "> POSITION CHOSEN! [GREEN]"
+                chooseBtn.TextColor3 = C.green
+                notify("✅ Position chosen!", 2)
+            end
+        end
+    end)
+end)
+
+-- Unchoose button
+local unchooseBtn = terminalButton(p1, "> UNCHOOSE POSITION [RED]", function()
+    chosenPosition = nil
+    isChosen = false
+    chooseBtn.Text = "> CHOOSE POSITION"
+    chooseBtn.TextColor3 = C.primary
+    notify("🔄 Position unchosen!", 2)
+end, C.red)
+
+-- Teleport to chosen
+local tpChosenBtn = terminalButton(p1, "> TELEPORT TO CHOSEN", function()
+    teleportToChosen()
+end)
+
+-- Position display
+local posDisplay = Instance.new("TextLabel")
+posDisplay.Size = UDim2.new(1, -20, 0, 20)
+posDisplay.Position = UDim2.new(0, 10, 0, 0)
+posDisplay.BackgroundTransparency = 1
+posDisplay.Text = "> POSITION: NONE"
+posDisplay.TextColor3 = C.dim
+posDisplay.TextSize = 10
+posDisplay.Font = Enum.Font.Code
+posDisplay.TextXAlignment = Enum.TextXAlignment.Left
+posDisplay.Parent = p1
+
+-- Update position display
+coroutine.wrap(function()
+    while posDisplay and posDisplay.Parent do
+        if chosenPosition then
+            pcall(function()
+                posDisplay.Text = "> POSITION: X=" .. math.floor(chosenPosition.X) .. " Y=" .. math.floor(chosenPosition.Y) .. " Z=" .. math.floor(chosenPosition.Z) .. " [CHOSEN]"
+                posDisplay.TextColor3 = C.green
+            end)
+        else
+            pcall(function()
+                posDisplay.Text = "> POSITION: NONE"
+                posDisplay.TextColor3 = C.dim
+            end)
+        end
+        task.wait(0.5)
+    end
+end)()
+
+-- ==================================================
+-- TAB 2: ESP - IMPROVED
+-- ==================================================
+
+local p2 = tabPages[2]
+
+terminalSection(p2, "ESP ENGINE")
+
+local espEnabled = false
+local espObjects = {}
+local espConnections = {}
+local espColor = C.primary
+local espBoxTransparency = 0.5
+local espDistance = 400
+
+local espToggle = terminalToggle(p2, "ENABLE ESP", false, function(s)
+    espEnabled = s
+    if s then
+        updateESP()
+        notify("👁️ ESP enabled", 2)
+    else
+        removeESP()
+        notify("👁️ ESP disabled", 2)
+    end
+end)
+
+-- Improved ESP creation
+local function createESP(char, plr)
+    if not char or espObjects[plr] then return end
+    if espObjects[plr] then
+        pcall(function() espObjects[plr]:Destroy() end)
+        espObjects[plr] = nil
+    end
+    
+    local espGroup = Instance.new("Model")
+    espGroup.Name = "ESP_" .. plr.Name
+    espGroup.Parent = char
+    
+    -- Health Bar
+    local healthBar = Instance.new("BillboardGui")
+    healthBar.Size = UDim2.new(0, 60, 0, 4)
+    healthBar.Adornee = char:FindFirstChild("Head")
+    healthBar.StudsOffset = Vector3.new(0, 2.5, 0)
+    healthBar.MaxDistance = espDistance
+    healthBar.Parent = espGroup
+    
+    local healthBg = Instance.new("Frame")
+    healthBg.Size = UDim2.new(1, 0, 1, 0)
+    healthBg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    healthBg.BackgroundTransparency = 0.3
+    healthBg.BorderSizePixel = 0
+    healthBg.Parent = healthBar
+    local healthBgCorner = Instance.new("UICorner")
+    healthBgCorner.CornerRadius = UDim.new(0, 2)
+    healthBgCorner.Parent = healthBg
+    
+    local healthFill = Instance.new("Frame")
+    healthFill.Size = UDim2.new(1, 0, 1, 0)
+    healthFill.BackgroundColor3 = C.green
+    healthFill.BackgroundTransparency = 0.1
+    healthFill.BorderSizePixel = 0
+    healthFill.Parent = healthBg
+    local healthFillCorner = Instance.new("UICorner")
+    healthFillCorner.CornerRadius = UDim.new(0, 2)
+    healthFillCorner.Parent = healthFill
+    
+    -- Name - Terminal style
+    local nameLabel = Instance.new("BillboardGui")
+    nameLabel.Size = UDim2.new(0, 80, 0, 12)
+    nameLabel.Adornee = char:FindFirstChild("Head")
+    nameLabel.StudsOffset = Vector3.new(0, 3.3, 0)
+    nameLabel.MaxDistance = espDistance
+    nameLabel.Parent = espGroup
+    
+    local nameText = Instance.new("TextLabel")
+    nameText.Size = UDim2.new(1, 0, 1, 0)
+    nameText.BackgroundTransparency = 1
+    nameText.Text = plr.Name
+    nameText.TextColor3 = Color3.fromRGB(0, 255, 70)
+    nameText.TextSize = 10
+    nameText.Font = Enum.Font.Code
+    nameText.TextStrokeTransparency = 0.5
+    nameText.Parent = nameLabel
+    
+    -- Box ESP - Clean
+    local box = Instance.new("BoxHandleAdornment")
+    box.Size = Vector3.new(2.4, 3.6, 1.1)
+    box.Adornee = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+    box.ZIndex = 0
+    box.AlwaysOnTop = true
+    box.Color3 = C.primary
+    box.Transparency = espBoxTransparency
+    box.Parent = espGroup
+    
+    -- Distance
+    local distLabel = Instance.new("BillboardGui")
+    distLabel.Size = UDim2.new(0, 40, 0, 10)
+    distLabel.Adornee = char:FindFirstChild("Head")
+    distLabel.StudsOffset = Vector3.new(0, -1.5, 0)
+    distLabel.MaxDistance = espDistance
+    distLabel.Parent = espGroup
+    
+    local distText = Instance.new("TextLabel")
+    distText.Size = UDim2.new(1, 0, 1, 0)
+    distText.BackgroundTransparency = 1
+    distText.Text = "0m"
+    distText.TextColor3 = Color3.fromRGB(80, 80, 100)
+    distText.TextSize = 8
+    distText.Font = Enum.Font.Code
+    distText.Parent = distLabel
+    
+    -- Tracer - Improved (line to target)
+    local tracer = Instance.new("BillboardGui")
+    tracer.Size = UDim2.new(0, 2, 0, 2)
+    tracer.Adornee = char:FindFirstChild("Head")
+    tracer.StudsOffset = Vector3.new(0, 0, 0)
+    tracer.MaxDistance = espDistance
+    tracer.Parent = espGroup
+    
+    local tracerFrame = Instance.new("Frame")
+    tracerFrame.Size = UDim2.new(1, 0, 1, 0)
+    tracerFrame.BackgroundColor3 = C.primary
+    tracerFrame.BackgroundTransparency = 0.3
+    tracerFrame.BorderSizePixel = 0
+    tracerFrame.Parent = tracer
+    
+    local connection = RunService.RenderStepped:Connect(function()
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local playerChar = player.Character
+        if not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then return end
+        local dist = (char.HumanoidRootPart.Position - playerChar.HumanoidRootPart.Position).Magnitude
+        distText.Text = math.floor(dist) .. "m"
+        
+        local scale = math.clamp(1 / (dist / 35 + 1), 0.2, 1)
+        box.Size = Vector3.new(2.4 * scale, 3.6 * scale, 1.1 * scale)
+        box.Transparency = espBoxTransparency + (1 - scale) * 0.15
+        
+        -- Update tracer position
+        local rootPos = playerChar.HumanoidRootPart.Position
+        local targetPos = char.HumanoidRootPart.Position
+        local direction = (targetPos - rootPos).Unit
+        local distance = (targetPos - rootPos).Magnitude
+        
+        if distance < espDistance then
+            tracer.StudsOffset = direction * (distance / 2)
+            tracer.Size = UDim2.new(0, distance, 0, 2)
+            tracerFrame.Size = UDim2.new(1, 0, 1, 0)
+            tracerFrame.BackgroundColor3 = C.primary
+            tracerFrame.BackgroundTransparency = 0.3
+        end
+    end)
+    table.insert(espConnections, connection)
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local healthConnection = humanoid.HealthChanged:Connect(function(health)
+            local maxHealth = humanoid.MaxHealth
+            local percent = math.clamp(health / maxHealth, 0, 1)
+            healthFill.Size = UDim2.new(percent, 0, 1, 0)
+            healthFill.BackgroundColor3 = percent > 0.5 and C.green or (percent > 0.25 and C.gold or C.red)
+        end)
+        table.insert(espConnections, healthConnection)
+    end
+    
+    espObjects[plr] = espGroup
+end
+
+local function removeESP()
+    for plr, espGroup in pairs(espObjects) do
+        pcall(function() espGroup:Destroy() end)
+    end
+    espObjects = {}
+    for _, conn in ipairs(espConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    espConnections = {}
+end
+
+local function updateESP()
+    if not espEnabled then
+        removeESP()
+        return
+    end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            local char = plr.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                if not espObjects[plr] then
+                    createESP(char, plr)
+                end
+            else
+                if espObjects[plr] then
+                    pcall(function() espObjects[plr]:Destroy() end)
+                    espObjects[plr] = nil
+                end
+            end
+        end
+    end
+end
+
+local function onPlayerAdded(plr)
+    if espEnabled then
+        task.wait(0.3)
+        updateESP()
+    end
+end
+
+local function onPlayerRemoving(plr)
+    if espObjects[plr] then
+        pcall(function() espObjects[plr]:Destroy() end)
+        espObjects[plr] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+terminalSection(p2, "ESP SETTINGS")
+local espDistSlider = terminalSlider(p2, "MAX DISTANCE", 50, 800, 400, "", function(v)
+    espDistance = math.floor(v)
+    removeESP()
+    if espEnabled then
+        updateESP()
+    end
+end)
+
+local espTransSlider = terminalSlider(p2, "BOX TRANSPARENCY", 0.1, 0.9, 0.5, "", function(v)
+    espBoxTransparency = v
+    removeESP()
+    if espEnabled then
+        updateESP()
+    end
+end)
+
+local espRefreshBtn = terminalButton(p2, "> REFRESH ESP", function()
+    removeESP()
+    if espEnabled then
+        updateESP()
+        notify("🔄 ESP refreshed", 2)
+    end
+end)
+
+coroutine.wrap(function()
+    while task.wait(0.5) do
+        if espEnabled then
+            updateESP()
+        end
+    end
+end)()
+
+-- ==================================================
+-- TAB 3: AIMBOT (SIMPLE)
+-- ==================================================
+
+local p3 = tabPages[3]
+
+terminalSection(p3, "AIMBOT ENGINE")
+local aimbotToggle = terminalToggle(p3, "ENABLE AIMBOT", false, function(s)
+    notify(s and "🎯 Aimbot enabled" or "🎯 Aimbot disabled", 2)
+end)
+
+local aimFovSlider = terminalSlider(p3, "FOV RADIUS", 0, 500, 200, "", function(v) end)
+local aimSmoothSlider = terminalSlider(p3, "SMOOTHNESS", 0.01, 1, 0.3, "", function(v) end)
+
+terminalSection(p3, "TARGET SETTINGS")
+local targetPartDropdown = terminalButton(p3, "> TARGET: HEAD", function()
+    notify("Toggle target part", 2)
+end)
+
+local teamCheckToggle = terminalToggle(p3, "TEAM CHECK", false, function(s) end)
+
+-- ==================================================
+-- TAB 4: SETTINGS
+-- ==================================================
+
+local p4 = tabPages[4]
+
+terminalSection(p4, "TERMINAL SETTINGS")
+
+local visualFeedback = terminalToggle(p4, "VISUAL FEEDBACK", true, function(s) end)
+local soundEffects = terminalToggle(p4, "SOUND EFFECTS", false, function(s) end)
+
+terminalSection(p4, "ABOUT")
+local aboutText = Instance.new("TextLabel")
+aboutText.Size = UDim2.new(1, -20, 0, 80)
+aboutText.Position = UDim2.new(0, 10, 0, 0)
+aboutText.BackgroundTransparency = 1
+aboutText.Text = "REDDIEHUB v24.0 HvH EDITION\nTERMINAL MODE\n\nUSER: " .. player.Name .. "\nSTATUS: ACTIVE"
+aboutText.TextColor3 = C.dim
+aboutText.TextSize = 11
+aboutText.Font = Enum.Font.Code
+aboutText.TextXAlignment = Enum.TextXAlignment.Left
+aboutText.TextYAlignment = Enum.TextYAlignment.Top
+aboutText.Parent = p4
+
+-- ==================================================
+-- OPEN/CLOSE BUTTON
+-- ==================================================
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 60, 0, 60)
+toggleBtn.Position = UDim2.new(1, -70, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+toggleBtn.BackgroundTransparency = 0.3
+toggleBtn.Text = "🟢"
+toggleBtn.TextColor3 = C.primary
+toggleBtn.TextSize = 30
+toggleBtn.Font = Enum.Font.Code
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Visible = true
+toggleBtn.Parent = screenGui
+
+-- Corner
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.Parent = toggleBtn
+
+addTerminalStroke(toggleBtn, 2)
+
+-- Glass
+local toggleGlass = Instance.new("Frame")
+toggleGlass.Size = UDim2.new(1, 0, 1, 0)
+toggleGlass.BackgroundColor3 = C.glass
+toggleGlass.BackgroundTransparency = 0.94
+toggleGlass.BorderSizePixel = 0
+toggleGlass.Parent = toggleBtn
+local toggleGlassCorner = Instance.new("UICorner")
+toggleGlassCorner.CornerRadius = UDim.new(0, 12)
+toggleGlassCorner.Parent = toggleGlass
+
+-- Draggable
+local toggleDragging = false
+local toggleDragOff = Vector2.new(0, 0)
+
+pcall(function()
+    toggleBtn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            toggleDragging = true
+            toggleDragOff = Vector2.new(mouse.X - toggleBtn.AbsolutePosition.X, mouse.Y - toggleBtn.AbsolutePosition.Y)
+        end
+    end)
+end)
+
+pcall(function()
+    UserInputService.InputChanged:Connect(function(i)
+        if toggleDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            pcall(function()
+                toggleBtn.Position = UDim2.new(0, mouse.X - toggleDragOff.X, 0, mouse.Y - toggleDragOff.Y)
+            end)
+        end
+    end)
+end)
+
+pcall(function()
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            toggleDragging = false
+        end
+    end)
+end)
+
+-- Toggle
+toggleBtn.MouseButton1Click:Connect(function()
+    hub.Visible = not hub.Visible
+    if hub.Visible then
+        toggleBtn.Text = "🟢"
+        toggleBtn.BackgroundColor3 = C.primary
+        toggleBtn.BackgroundTransparency = 0.1
+        toggleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    else
+        toggleBtn.Text = "🟢"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        toggleBtn.BackgroundTransparency = 0.3
+        toggleBtn.TextColor3 = C.primary
+    end
+end)
+
+-- ==================================================
+-- DRAG HUB
+-- ==================================================
+
+local hubDragging = false
+local hubDragOff = Vector2.new(0, 0)
+
+pcall(function()
+    header.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            hubDragging = true
+            hubDragOff = Vector2.new(mouse.X - hub.AbsolutePosition.X, mouse.Y - hub.AbsolutePosition.Y)
+        end
+    end)
+end)
+
+pcall(function()
+    UserInputService.InputChanged:Connect(function(i)
+        if hubDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            pcall(function()
+                hub.Position = UDim2.new(0, mouse.X - hubDragOff.X, 0, mouse.Y - hubDragOff.Y)
+            end)
+        end
+    end)
+end)
+
+pcall(function()
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            hubDragging = false
+        end
+    end)
+end)
+
+-- ==================================================
+-- LOADING SCREEN PROGRESS
+-- ==================================================
+
+task.spawn(function()
+    local msgIndex = 1
+    for i = 0, 100 do
+        pcall(function()
+            loadFill.Size = UDim2.new(i/100, 0, 1, 0)
+            loadPercent.Text = i .. "%"
+        end)
+        if i % 14 == 0 and msgIndex <= #loadingMessages then
+            pcall(function()
+                loadingSub.Text = loadingMessages[msgIndex]
+            end)
+            msgIndex = msgIndex + 1
+        end
+        task.wait(0.05)
+    end
+    
+    task.wait(2)
+    
+    pcall(function()
+        loadingScreenGui:Destroy()
+    end)
+    
+    hub.Visible = false
+    notify("🟢 ReddieHub v24.0 HvH Loaded! Click 🟢 to open", 4)
+    print("✅ Loading screen destroyed!")
+end)
+
+print("==========================================")
+print("✅ REDDIEHUB v24.0 HvH EDITION")
+print("📋 Features:")
+print("   🔴 Terminal HvH Style")
+print("   🚀 Teleport - Tap=50 / Hold=Slow")
+print("   📍 Choose/Unchoose Position")
+print("   👁️ Improved ESP with Tracers")
+print("   🎯 Aimbot Engine")
+print("   💻 Linux Terminal Aesthetic")
+print("==========================================")
+
+end)
+
+-- If there was an error, print it
+if not success then
+    print("❌ ReddieHub Error: " .. tostring(err))
+    warn("Error loading ReddieHub: " .. tostring(err))
+end
