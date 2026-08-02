@@ -1,0 +1,1406 @@
+-- ==============================================================================
+-- CAMLOCK // RETRO LINUX TERMINAL TACTICAL HUB - COMPLETE BUNDLE
+-- ==============================================================================
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local Camera = Workspace.CurrentCamera
+
+local player = Players.LocalPlayer
+if not player then
+    repeat task.wait() until Players.LocalPlayer
+    player = Players.LocalPlayer
+end
+
+repeat task.wait() until player and player.Character
+
+-- Cleanup old instances safely
+pcall(function()
+    if CoreGui:FindFirstChild("CamlockHub") then
+        CoreGui.CamlockHub:Destroy()
+    end
+    if player.PlayerGui:FindFirstChild("CamlockHub") then
+        player.PlayerGui.CamlockHub:Destroy()
+    end
+end)
+
+-- Configuration Settings Table (90s Hacker / Terminal Theme)
+getgenv().CamlockConfig = {
+    MasterSwitch = true,
+    CamlockEnabled = true,
+    Prediction = 0.135,
+    Smoothness = 0.25,
+    BodyPart = "Head",
+    AutoCamlock = true,
+    ManualLockActive = false,
+    
+    -- Target Info Card Settings
+    ShowTargetInfo = true,
+    TargetInfoAvatar = true,
+    TargetInfoName = true,
+    TargetInfoDisplay = true,
+    TargetInfoDist = true,
+    TargetInfoHealth = true,
+
+    SilentAimEnabled = true,
+    SilentAutoCamlock = true,
+    SilentPrediction = 0.135,
+    SilentSmoothness = 0.25,
+    FOVSize = 120,
+    ShowFOV = true,
+    SilentFOVColor = Color3.fromRGB(0, 255, 65), -- Terminal Green
+    
+    BoxESP = true,
+    BoxColor = Color3.fromRGB(0, 255, 65),
+    HealthBar = true,
+    Skeleton = true,
+    SkeletonColor = Color3.fromRGB(0, 200, 50),
+    Tracers = true,
+    TracerColor = Color3.fromRGB(0, 180, 40),
+    DistanceMeters = true,
+    WallCheck = false,
+    NameDisplay = true,
+    NameColor = Color3.fromRGB(0, 255, 65),
+    RainbowColors = false,
+    RainbowTrail = false,
+    RainbowHalo = false,
+
+    ThemeBgColor = Color3.fromRGB(5, 10, 5),          -- Dark CRT Terminal Background
+    ThemeSidebarColor = Color3.fromRGB(2, 6, 2),      -- Darker Terminal Sidebar
+    ThemeTextColor = Color3.fromRGB(0, 255, 65),      -- Matrix Green Text
+    
+    ConfigName = "root_config",
+    SavedConfigs = {"root_config", "stealth_kernel"},
+}
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CamlockHub"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.IgnoreGuiInset = true
+
+local function getRootParent()
+    if gethui then
+        local success, parent = pcall(gethui)
+        if success and parent then return parent end
+    end
+    local success, core = pcall(function() return CoreGui end)
+    if success and core then return core end
+    return player:WaitForChild("PlayerGui")
+end
+
+screenGui.Parent = getRootParent()
+
+-- Retro CRT Scanline Overlay Effect for Ultimate 90s Linux Vibe
+local crtOverlay = Instance.new("Frame")
+crtOverlay.Size = UDim2.new(1, 0, 1, 0)
+crtOverlay.BackgroundTransparency = 1
+crtOverlay.BorderSizePixel = 0
+crtOverlay.ZIndex = 999
+crtOverlay.Active = false
+crtOverlay.Parent = screenGui
+
+local function sendNotification(text)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 280, 0, 40)
+    frame.Position = UDim2.new(1, -290, 1, -60)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+    frame.BorderSizePixel = 1
+    frame.BorderColor3 = Color3.fromRGB(0, 255, 65)
+    frame.Parent = screenGui
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -10, 1, 0)
+    lbl.Position = UDim2.new(0, 5, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "[SYS_LOG] " .. text
+    lbl.TextColor3 = Color3.fromRGB(0, 255, 65)
+    lbl.TextSize = 10
+    lbl.Font = Enum.Font.Code
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = frame
+    
+    task.delay(3, function()
+        frame:Destroy()
+    end)
+end
+
+-- COMPACT CLI TOGGLE BUTTON (No text next to it)
+local avatarBtn = Instance.new("ImageButton")
+avatarBtn.Name = "CamlockToggle"
+avatarBtn.Size = UDim2.new(0, 42, 0, 42)
+avatarBtn.Position = UDim2.new(0, 20, 0, 150)
+avatarBtn.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+avatarBtn.BorderSizePixel = 1
+avatarBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+avatarBtn.Parent = screenGui
+
+local avatarImg = Instance.new("ImageLabel")
+avatarImg.Size = UDim2.new(0, 36, 0, 36)
+avatarImg.Position = UDim2.new(0, 2, 0, 2)
+avatarImg.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+avatarImg.Image = "rbxthumb://type=Avatar&id=" .. player.UserId .. "&w=150&h=150"
+avatarImg.Parent = avatarBtn
+
+-- Draggable Logic for CLI Button
+local dragging, dragInput, dragStart, startPos
+avatarBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = avatarBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+avatarBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        avatarBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ==============================================================================
+-- MAIN GUI WINDOW (LINUX TERMINAL STYLE)
+-- ==============================================================================
+local mainWindow = Instance.new("Frame")
+mainWindow.Name = "MainWindow"
+mainWindow.Size = UDim2.new(0, 820, 0, 540)
+mainWindow.Position = UDim2.new(0.5, -410, 0.5, -270)
+mainWindow.BackgroundColor3 = getgenv().CamlockConfig.ThemeBgColor
+mainWindow.BorderSizePixel = 1
+mainWindow.BorderColor3 = Color3.fromRGB(0, 255, 65)
+mainWindow.Visible = true
+mainWindow.Parent = screenGui
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 26)
+topBar.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainWindow
+
+local topTitle = Instance.new("TextLabel")
+topTitle.Size = UDim2.new(1, -15, 1, 0)
+topTitle.Position = UDim2.new(0, 10, 0, 0)
+topTitle.BackgroundTransparency = 1
+topTitle.Text = "root@kali:~/tactical_hub/kernel_v6.1# ./init_cli.sh"
+topTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+topTitle.TextSize = 11
+topTitle.Font = Enum.Font.Code
+topTitle.TextXAlignment = Enum.TextXAlignment.Left
+topTitle.Parent = topBar
+
+local winDragging, winDragInput, winDragStart, winStartPos
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        winDragging = true
+        winDragStart = input.Position
+        winStartPos = mainWindow.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                winDragging = false
+            end
+        end)
+    end
+end)
+
+topBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        winDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == winDragInput and winDragging then
+        local delta = input.Position - winDragStart
+        mainWindow.Position = UDim2.new(winStartPos.X.Scale, winStartPos.X.Offset + delta.X, winStartPos.Y.Scale, winStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+avatarBtn.MouseButton1Click:Connect(function()
+    mainWindow.Visible = not mainWindow.Visible
+end)
+
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0, 220, 1, -26)
+sidebar.Position = UDim2.new(0, 0, 0, 26)
+sidebar.BackgroundColor3 = getgenv().CamlockConfig.ThemeSidebarColor
+sidebar.BorderSizePixel = 1
+sidebar.BorderColor3 = Color3.fromRGB(0, 100, 30)
+sidebar.Parent = mainWindow
+
+local brandTitle = Instance.new("TextLabel")
+brandTitle.Size = UDim2.new(1, -20, 0, 35)
+brandTitle.Position = UDim2.new(0, 12, 0, 10)
+brandTitle.BackgroundTransparency = 1
+brandTitle.Text = "[SYS_KERNEL] v6.1"
+brandTitle.TextColor3 = getgenv().CamlockConfig.ThemeTextColor
+brandTitle.TextSize = 14
+brandTitle.Font = Enum.Font.Code
+brandTitle.TextXAlignment = Enum.TextXAlignment.Left
+brandTitle.Parent = sidebar
+
+local tabsContainer = Instance.new("ScrollingFrame")
+tabsContainer.Size = UDim2.new(1, 0, 1, -120)
+tabsContainer.Position = UDim2.new(0, 0, 0, 50)
+tabsContainer.BackgroundTransparency = 1
+tabsContainer.CanvasSize = UDim2.new(0, 0, 0, 250)
+tabsContainer.ScrollBarThickness = 2
+tabsContainer.Parent = sidebar
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.Padding = UDim.new(0, 6)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Parent = tabsContainer
+
+local contentArea = Instance.new("Frame")
+contentArea.Size = UDim2.new(1, -220, 1, -26)
+contentArea.Position = UDim2.new(0, 220, 0, 26)
+contentArea.BackgroundTransparency = 1
+contentArea.Parent = mainWindow
+
+local panels = {}
+local function createPanel(name)
+    local panel = Instance.new("ScrollingFrame")
+    panel.Name = name .. "Panel"
+    panel.Size = UDim2.new(1, 0, 1, 0)
+    panel.Position = UDim2.new(0, 0, 0, 0)
+    panel.BackgroundTransparency = 1
+    panel.CanvasSize = UDim2.new(0, 0, 0, 1150)
+    panel.ScrollBarThickness = 4
+    panel.Visible = false
+    panel.Parent = contentArea
+    panels[name] = panel
+    return panel
+end
+
+createPanel("Camlock")
+createPanel("Visuals")
+createPanel("Configs")
+panels["Camlock"].Visible = true
+
+local function createTabButton(name, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -16, 0, 35)
+    btn.Position = UDim2.new(0, 8, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(0, 100, 30)
+    btn.Text = " > " .. name
+    btn.TextColor3 = Color3.fromRGB(100, 200, 100)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.Code
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.LayoutOrder = order
+    btn.Parent = tabsContainer
+
+    btn.MouseButton1Click:Connect(function()
+        for _, pObj in pairs(panels) do
+            pObj.Visible = false
+        end
+        for _, child in ipairs(tabsContainer:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+                child.BorderColor3 = Color3.fromRGB(0, 100, 30)
+                child.TextColor3 = Color3.fromRGB(100, 200, 100)
+            end
+        end
+        if panels[name] then
+            panels[name].Visible = true
+            btn.BackgroundColor3 = Color3.fromRGB(0, 40, 10)
+            btn.BorderColor3 = getgenv().CamlockConfig.ThemeTextColor
+            btn.TextColor3 = getgenv().CamlockConfig.ThemeTextColor
+        end
+    end)
+    return btn
+end
+
+local tabCam = createTabButton("Camlock & Targeting", 1)
+tabCam.BackgroundColor3 = Color3.fromRGB(0, 40, 10)
+tabCam.BorderColor3 = getgenv().CamlockConfig.ThemeTextColor
+tabCam.TextColor3 = getgenv().CamlockConfig.ThemeTextColor
+
+createTabButton("Visuals & ESP", 2)
+createTabButton("Configs & Profiles", 3)
+
+-- Terminal User CLI Status Box
+local userProfile = Instance.new("Frame")
+userProfile.Size = UDim2.new(1, -16, 0, 45)
+userProfile.Position = UDim2.new(0, 8, 1, -55)
+userProfile.BackgroundColor3 = Color3.fromRGB(0, 12, 0)
+userProfile.BorderSizePixel = 1
+userProfile.BorderColor3 = Color3.fromRGB(0, 150, 40)
+userProfile.Parent = sidebar
+
+local userName = Instance.new("TextLabel")
+userName.Size = UDim2.new(1, -10, 0, 20)
+userName.Position = UDim2.new(0, 6, 0, 4)
+userName.BackgroundTransparency = 1
+userName.Text = "usr: " .. player.Name
+userName.TextColor3 = getgenv().CamlockConfig.ThemeTextColor
+userName.TextSize = 11
+userName.Font = Enum.Font.Code
+userName.TextXAlignment = Enum.TextXAlignment.Left
+userName.Parent = userProfile
+
+local userHandle = Instance.new("TextLabel")
+userHandle.Size = UDim2.new(1, -10, 0, 16)
+userHandle.Position = UDim2.new(0, 6, 0, 22)
+userHandle.BackgroundTransparency = 1
+userHandle.Text = "status: active [SECURE]"
+userHandle.TextColor3 = Color3.fromRGB(0, 180, 60)
+userHandle.TextSize = 9
+userHandle.Font = Enum.Font.Code
+userHandle.TextXAlignment = Enum.TextXAlignment.Left
+userHandle.Parent = userProfile
+
+-- UI Builder Helpers (Retro Console Aesthetic)
+local function createCard(parent, size, pos)
+    local card = Instance.new("Frame")
+    card.Size = size
+    card.Position = pos
+    card.BackgroundColor3 = Color3.fromRGB(2, 12, 2)
+    card.BorderSizePixel = 1
+    card.BorderColor3 = Color3.fromRGB(0, 120, 35)
+    card.Parent = parent
+    return card
+end
+
+local function createToggle(card, text, configKey, yPos)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 0, 26)
+    label.Position = UDim2.new(0, 10, 0, yPos)
+    label.BackgroundTransparency = 1
+    label.Text = "> " .. text
+    label.TextColor3 = Color3.fromRGB(180, 255, 180)
+    label.TextSize = 11
+    label.Font = Enum.Font.Code
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = card
+
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 42, 0, 20)
+    toggleBtn.Position = UDim2.new(1, -50, 0, yPos + 3)
+    toggleBtn.BackgroundColor3 = getgenv().CamlockConfig[configKey] and Color3.fromRGB(0, 50, 15) or Color3.fromRGB(20, 20, 20)
+    toggleBtn.BorderSizePixel = 1
+    toggleBtn.BorderColor3 = getgenv().CamlockConfig[configKey] and Color3.fromRGB(0, 255, 65) or Color3.fromRGB(80, 80, 80)
+    toggleBtn.Text = getgenv().CamlockConfig[configKey] and "[ON]" or "[OFF]"
+    toggleBtn.TextColor3 = getgenv().CamlockConfig[configKey] and Color3.fromRGB(0, 255, 65) or Color3.fromRGB(150, 150, 150)
+    toggleBtn.TextSize = 9
+    toggleBtn.Font = Enum.Font.Code
+    toggleBtn.AutoButtonColor = false
+    toggleBtn.Parent = card
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        getgenv().CamlockConfig[configKey] = not getgenv().CamlockConfig[configKey]
+        local state = getgenv().CamlockConfig[configKey]
+        toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 50, 15) or Color3.fromRGB(20, 20, 20)
+        toggleBtn.BorderColor3 = state and Color3.fromRGB(0, 255, 65) or Color3.fromRGB(80, 80, 80)
+        toggleBtn.Text = state and "[ON]" or "[OFF]"
+        toggleBtn.TextColor3 = state and Color3.fromRGB(0, 255, 65) or Color3.fromRGB(150, 150, 150)
+    end)
+end
+
+local function createSlider(card, text, configKey, minVal, maxVal, yPos, unit)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -70, 0, 18)
+    label.Position = UDim2.new(0, 10, 0, yPos)
+    label.BackgroundTransparency = 1
+    label.Text = "> " .. text
+    label.TextColor3 = Color3.fromRGB(180, 255, 180)
+    label.TextSize = 11
+    label.Font = Enum.Font.Code
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = card
+
+    local valLabel = Instance.new("TextLabel")
+    valLabel.Size = UDim2.new(0, 60, 0, 18)
+    valLabel.Position = UDim2.new(1, -66, 0, yPos)
+    valLabel.BackgroundTransparency = 1
+    valLabel.Text = tostring(getgenv().CamlockConfig[configKey]) .. (unit or "")
+    valLabel.TextColor3 = Color3.fromRGB(0, 255, 65)
+    valLabel.TextSize = 11
+    valLabel.Font = Enum.Font.Code
+    valLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valLabel.Parent = card
+
+    local sliderBG = Instance.new("Frame")
+    sliderBG.Size = UDim2.new(1, -20, 0, 5)
+    sliderBG.Position = UDim2.new(0, 10, 0, yPos + 20)
+    sliderBG.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+    sliderBG.BorderSizePixel = 1
+    sliderBG.BorderColor3 = Color3.fromRGB(0, 100, 35)
+    sliderBG.Parent = card
+
+    local sliderFill = Instance.new("Frame")
+    local initialPercent = math.clamp((getgenv().CamlockConfig[configKey] - minVal) / (maxVal - minVal), 0, 1)
+    sliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 65)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBG
+
+    local draggingSlider = false
+    sliderBG.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = true
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = input.Position.X
+            local absolutePosition = sliderBG.AbsolutePosition.X
+            local absoluteSize = sliderBG.AbsoluteSize.X
+            local percent = math.clamp((pos - absolutePosition) / absoluteSize, 0, 1)
+            
+            sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            local val = minVal + (maxVal - minVal) * percent
+            if unit == "" or unit == "px" then
+                val = math.floor(val)
+            else
+                val = math.floor(val * 1000) / 1000
+            end
+            getgenv().CamlockConfig[configKey] = val
+            valLabel.Text = tostring(val) .. (unit or "")
+        end
+    end)
+end
+
+local function createColorPicker(card, text, configKey, yPos)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -90, 0, 26)
+    label.Position = UDim2.new(0, 10, 0, yPos)
+    label.BackgroundTransparency = 1
+    label.Text = "> " .. text
+    label.TextColor3 = Color3.fromRGB(180, 255, 180)
+    label.TextSize = 11
+    label.Font = Enum.Font.Code
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = card
+
+    local colorBtn = Instance.new("TextButton")
+    colorBtn.Size = UDim2.new(0, 70, 0, 20)
+    colorBtn.Position = UDim2.new(1, -80, 0, yPos + 3)
+    colorBtn.BackgroundColor3 = getgenv().CamlockConfig[configKey]
+    colorBtn.BorderSizePixel = 1
+    colorBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+    colorBtn.Text = "[EDIT]"
+    colorBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    colorBtn.TextSize = 9
+    colorBtn.Font = Enum.Font.Code
+    colorBtn.Parent = card
+
+    local dropdownList = Instance.new("ScrollingFrame")
+    dropdownList.Size = UDim2.new(0, 130, 0, 130)
+    dropdownList.Position = UDim2.new(1, -130, 1, 2)
+    dropdownList.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+    dropdownList.BorderSizePixel = 1
+    dropdownList.BorderColor3 = Color3.fromRGB(0, 255, 65)
+    dropdownList.Visible = false
+    dropdownList.CanvasSize = UDim2.new(0, 0, 0, 220)
+    dropdownList.ScrollBarThickness = 2
+    dropdownList.ZIndex = 15
+    dropdownList.Parent = colorBtn
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 2)
+    listLayout.Parent = dropdownList
+
+    local presets = {
+        {Name = "Matrix Green", Color = Color3.fromRGB(0, 255, 65)},
+        {Name = "Terminal Amber", Color = Color3.fromRGB(255, 176, 0)},
+        {Name = "Cyber Cyan", Color = Color3.fromRGB(0, 229, 255)},
+        {Name = "Blood Red", Color = Color3.fromRGB(255, 30, 30)},
+        {Name = "Pure White", Color = Color3.fromRGB(255, 255, 255)},
+        {Name = "Deep Purple", Color = Color3.fromRGB(180, 50, 255)},
+        {Name = "Hacker Pink", Color = Color3.fromRGB(255, 105, 180)},
+        {Name = "Dark Charcoal", Color = Color3.fromRGB(20, 20, 25)}
+    }
+
+    for _, preset in ipairs(presets) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, 0, 0, 24)
+        optBtn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+        optBtn.BorderSizePixel = 0
+        optBtn.Text = " " .. preset.Name
+        optBtn.TextColor3 = preset.Color
+        optBtn.TextSize = 10
+        optBtn.Font = Enum.Font.Code
+        optBtn.TextXAlignment = Enum.TextXAlignment.Left
+        optBtn.ZIndex = 16
+        optBtn.Parent = dropdownList
+        optBtn.MouseButton1Click:Connect(function()
+            getgenv().CamlockConfig[configKey] = preset.Color
+            colorBtn.BackgroundColor3 = preset.Color
+            dropdownList.Visible = false
+        end)
+    end
+
+    colorBtn.MouseButton1Click:Connect(function()
+        dropdownList.Visible = not dropdownList.Visible
+    end)
+end
+
+-- ==============================================================================
+-- PANELS SETUP & MODULE CARDS
+-- ==============================================================================
+
+-- 1. Camlock & Targeting Panel
+local camPanel = panels["Camlock"]
+
+local camCardLeft = createCard(camPanel, UDim2.new(0, 370, 0, 330), UDim2.new(0, 10, 0, 10))
+local camTitleL = Instance.new("TextLabel")
+camTitleL.Size = UDim2.new(1, -15, 0, 25)
+camTitleL.Position = UDim2.new(0, 10, 0, 8)
+camTitleL.BackgroundTransparency = 1
+camTitleL.Text = "[+] KERNEL_CAMLOCK_MODULE"
+camTitleL.TextColor3 = Color3.fromRGB(0, 255, 65)
+camTitleL.TextSize = 12
+camTitleL.Font = Enum.Font.Code
+camTitleL.TextXAlignment = Enum.TextXAlignment.Left
+camTitleL.Parent = camCardLeft
+
+createToggle(camCardLeft, "Camlock Master Enable", "CamlockEnabled", 38)
+createToggle(camCardLeft, "Auto-Lock Target", "AutoCamlock", 76)
+createSlider(camCardLeft, "Prediction Vector", "Prediction", 0.01, 0.5, 114, "")
+createSlider(camCardLeft, "Smoothing Rate", "Smoothness", 0.05, 1, 172, "")
+
+-- Target Selector Menu Dropdown inside Camlock Module Card
+local targetSelectBtn = Instance.new("TextButton")
+targetSelectBtn.Size = UDim2.new(1, -20, 0, 30)
+targetSelectBtn.Position = UDim2.new(0, 10, 0, 225)
+targetSelectBtn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+targetSelectBtn.BorderSizePixel = 1
+targetSelectBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+targetSelectBtn.Text = " > SELECT TARGET: [ AUTO NEAREST ]"
+targetSelectBtn.TextColor3 = Color3.fromRGB(0, 255, 65)
+targetSelectBtn.TextSize = 10
+targetSelectBtn.Font = Enum.Font.Code
+targetSelectBtn.TextXAlignment = Enum.TextXAlignment.Left
+targetSelectBtn.Parent = camCardLeft
+
+local targetDropdown = Instance.new("ScrollingFrame")
+targetDropdown.Size = UDim2.new(1, 0, 0, 110)
+targetDropdown.Position = UDim2.new(0, 0, 1, 3)
+targetDropdown.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+targetDropdown.BorderSizePixel = 1
+targetDropdown.BorderColor3 = Color3.fromRGB(0, 255, 65)
+targetDropdown.Visible = false
+targetDropdown.CanvasSize = UDim2.new(0, 0, 0, 0)
+targetDropdown.ScrollBarThickness = 2
+targetDropdown.ZIndex = 25
+targetDropdown.Parent = targetSelectBtn
+
+local tDropLayout = Instance.new("UIListLayout")
+tDropLayout.Padding = UDim.new(0, 2)
+tDropLayout.Parent = targetDropdown
+
+getgenv().SelectedTargetPlayer = nil
+
+local function refreshTargetDropdown()
+    for _, ch in ipairs(targetDropdown:GetChildren()) do
+        if ch:IsA("TextButton") then ch:Destroy() end
+    end
+    
+    local autoBtn = Instance.new("TextButton")
+    autoBtn.Size = UDim2.new(1, 0, 0, 24)
+    autoBtn.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+    autoBtn.BorderSizePixel = 0
+    autoBtn.Text = " > [ AUTO NEAREST PLAYER ]"
+    autoBtn.TextColor3 = Color3.fromRGB(0, 255, 65)
+    autoBtn.TextSize = 10
+    autoBtn.Font = Enum.Font.Code
+    autoBtn.TextXAlignment = Enum.TextXAlignment.Left
+    autoBtn.ZIndex = 26
+    autoBtn.Parent = targetDropdown
+    autoBtn.MouseButton1Click:Connect(function()
+        getgenv().SelectedTargetPlayer = nil
+        targetSelectBtn.Text = " > SELECT TARGET: [ AUTO NEAREST ]"
+        targetDropdown.Visible = false
+        sendNotification("Target mode set to Auto Nearest.")
+    end)
+
+    local count = 1
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            count = count + 1
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, 0, 0, 24)
+            pBtn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+            pBtn.BorderSizePixel = 0
+            pBtn.Text = " > " .. p.Name
+            pBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
+            pBtn.TextSize = 10
+            pBtn.Font = Enum.Font.Code
+            pBtn.TextXAlignment = Enum.TextXAlignment.Left
+            pBtn.ZIndex = 26
+            pBtn.Parent = targetDropdown
+            pBtn.MouseButton1Click:Connect(function()
+                getgenv().SelectedTargetPlayer = p
+                targetSelectBtn.Text = " > LOCKED TARGET: " .. p.Name
+                targetDropdown.Visible = false
+                sendNotification("Target locked onto: " .. p.Name)
+            end)
+        end
+    end
+    targetDropdown.CanvasSize = UDim2.new(0, 0, 0, count * 26)
+end
+
+targetSelectBtn.MouseButton1Click:Connect(function()
+    refreshTargetDropdown()
+    targetDropdown.Visible = not targetDropdown.Visible
+end)
+
+-- Force Lock Button
+local manualLockBtn = Instance.new("TextButton")
+manualLockBtn.Size = UDim2.new(1, -20, 0, 30)
+manualLockBtn.Position = UDim2.new(0, 10, 0, 265)
+manualLockBtn.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+manualLockBtn.BorderSizePixel = 1
+manualLockBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+manualLockBtn.Text = "[ EXEC: FORCE LOCK ONTO TARGET ]"
+manualLockBtn.TextColor3 = Color3.fromRGB(0, 255, 65)
+manualLockBtn.TextSize = 10
+manualLockBtn.Font = Enum.Font.Code
+manualLockBtn.Parent = camCardLeft
+
+manualLockBtn.MouseButton1Click:Connect(function()
+    getgenv().CamlockConfig.ManualLockActive = not getgenv().CamlockConfig.ManualLockActive
+    if getgenv().CamlockConfig.ManualLockActive then
+        manualLockBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 20)
+        manualLockBtn.Text = "[ STATUS: LOCKED ONTO TARGET ]"
+        sendNotification("Manual target lock engaged.")
+    else
+        manualLockBtn.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+        manualLockBtn.Text = "[ EXEC: FORCE LOCK ONTO TARGET ]"
+        sendNotification("Manual target lock released.")
+    end
+end)
+
+-- Target Info Card Settings Right Column
+local camCardRight = createCard(camPanel, UDim2.new(0, 385, 0, 330), UDim2.new(0, 385, 0, 10))
+local infoTitle = Instance.new("TextLabel")
+infoTitle.Size = UDim2.new(1, -15, 0, 25)
+infoTitle.Position = UDim2.new(0, 10, 0, 8)
+infoTitle.BackgroundTransparency = 1
+infoTitle.Text = "[+] TARGET_HUD_TELEMETRY"
+infoTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+infoTitle.TextSize = 12
+infoTitle.Font = Enum.Font.Code
+infoTitle.TextXAlignment = Enum.TextXAlignment.Left
+infoTitle.Parent = camCardRight
+
+createToggle(camCardRight, "Show HUD Panel", "ShowTargetInfo", 38)
+createToggle(camCardRight, "Render Avatar Matrix", "TargetInfoAvatar", 76)
+createToggle(camCardRight, "Display Username ID", "TargetInfoName", 114)
+createToggle(camCardRight, "Display Aliases", "TargetInfoDisplay", 152)
+createToggle(camCardRight, "Display Vector Distance", "TargetInfoDist", 190)
+createToggle(camCardRight, "Display Vital HP", "TargetInfoHealth", 228)
+
+-- Silent Aim Sub-Module (positioned below camlock modules for clean vertical flow)
+local silentCard = createCard(camPanel, UDim2.new(0, 760, 0, 370), UDim2.new(0, 10, 0, 350))
+local silentTitle = Instance.new("TextLabel")
+silentTitle.Size = UDim2.new(1, -15, 0, 25)
+silentTitle.Position = UDim2.new(0, 10, 0, 8)
+silentTitle.BackgroundTransparency = 1
+silentTitle.Text = "[+] SILENT_AIM_TARGET_MODULE"
+silentTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+silentTitle.TextSize = 12
+silentTitle.Font = Enum.Font.Code
+silentTitle.TextXAlignment = Enum.TextXAlignment.Left
+silentTitle.Parent = silentCard
+
+createToggle(silentCard, "Silent Aim Enable", "SilentAimEnabled", 38)
+createToggle(silentCard, "Silent Auto-Lock", "SilentAutoCamlock", 76)
+createToggle(silentCard, "Show FOV Circle", "ShowFOV", 114)
+createSlider(silentCard, "FOV Radius Size", "FOVSize", 30, 400, 152, "px")
+createSlider(silentCard, "Silent Prediction", "SilentPrediction", 0.01, 0.5, 210, "")
+createColorPicker(silentCard, "FOV Circle Color", "SilentFOVColor", 270)
+
+-- NEW: Body Changer & Camlock Selector Sub-Module (Placed securely under Silent Aim settings)
+local bodyChangerCard = createCard(camPanel, UDim2.new(0, 760, 0, 260), UDim2.new(0, 10, 0, 735))
+local bodyChangerTitle = Instance.new("TextLabel")
+bodyChangerTitle.Size = UDim2.new(1, -15, 0, 25)
+bodyChangerTitle.Position = UDim2.new(0, 10, 0, 8)
+bodyChangerTitle.BackgroundTransparency = 1
+bodyChangerTitle.Text = "[+] BODY_CHANGER & CAMLOCK SELECTOR"
+bodyChangerTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+bodyChangerTitle.TextSize = 12
+bodyChangerTitle.Font = Enum.Font.Code
+bodyChangerTitle.TextXAlignment = Enum.TextXAlignment.Left
+bodyChangerTitle.Parent = bodyChangerCard
+
+local bodyPartDropdownBtn = Instance.new("TextButton")
+bodyPartDropdownBtn.Size = UDim2.new(1, -20, 0, 30)
+bodyPartDropdownBtn.Position = UDim2.new(0, 10, 0, 45)
+bodyPartDropdownBtn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+bodyPartDropdownBtn.BorderSizePixel = 1
+bodyPartDropdownBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+bodyPartDropdownBtn.Text = " > TARGET BODY PART: [ HEAD ]"
+bodyPartDropdownBtn.TextColor3 = Color3.fromRGB(0, 255, 65)
+bodyPartDropdownBtn.TextSize = 10
+bodyPartDropdownBtn.Font = Enum.Font.Code
+bodyPartDropdownBtn.TextXAlignment = Enum.TextXAlignment.Left
+bodyPartDropdownBtn.Parent = bodyChangerCard
+
+local bodyPartList = Instance.new("ScrollingFrame")
+bodyPartList.Size = UDim2.new(1, 0, 0, 110)
+bodyPartList.Position = UDim2.new(0, 0, 1, 3)
+bodyPartList.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+bodyPartList.BorderSizePixel = 1
+bodyPartList.BorderColor3 = Color3.fromRGB(0, 255, 65)
+bodyPartList.Visible = false
+bodyPartList.CanvasSize = UDim2.new(0, 0, 0, 140)
+bodyPartList.ScrollBarThickness = 2
+bodyPartList.ZIndex = 25
+bodyPartList.Parent = bodyPartDropdownBtn
+
+local bpListLayout = Instance.new("UIListLayout")
+bpListLayout.Padding = UDim.new(0, 2)
+bpListLayout.Parent = bodyPartList
+
+local parts = {"Head", "HumanoidRootPart", "UpperTorso", "Torso"}
+for _, pt in ipairs(parts) do
+    local pOpt = Instance.new("TextButton")
+    pOpt.Size = UDim2.new(1, 0, 0, 28)
+    pOpt.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+    pOpt.BorderSizePixel = 0
+    pOpt.Text = " > " .. pt
+    pOpt.TextColor3 = Color3.fromRGB(150, 255, 150)
+    pOpt.TextSize = 10
+    pOpt.Font = Enum.Font.Code
+    pOpt.TextXAlignment = Enum.TextXAlignment.Left
+    pOpt.ZIndex = 26
+    pOpt.Parent = bodyPartList
+    pOpt.MouseButton1Click:Connect(function()
+        getgenv().CamlockConfig.BodyPart = pt
+        bodyPartDropdownBtn.Text = " > TARGET BODY PART: [ " .. string.upper(pt) .. " ]"
+        bodyPartList.Visible = false
+        sendNotification("Target body part updated to: " .. pt)
+    end)
+end
+
+bodyPartDropdownBtn.MouseButton1Click:Connect(function()
+    bodyPartList.Visible = not bodyPartList.Visible
+end)
+
+-- Dedicated Camlock Action Button inside tab to instantly lock onto targeted players
+local tabCamlockActionBtn = Instance.new("TextButton")
+tabCamlockActionBtn.Size = UDim2.new(1, -20, 0, 42)
+tabCamlockActionBtn.Position = UDim2.new(0, 10, 0, 95)
+tabCamlockActionBtn.BackgroundColor3 = Color3.fromRGB(0, 30, 10)
+tabCamlockActionBtn.BorderSizePixel = 1
+tabCamlockActionBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+tabCamlockActionBtn.Text = "[ ACTIVATE CAMLOCK ENGAGEMENT ]"
+tabCamlockActionBtn.TextColor3 = Color3.fromRGB(0, 255, 65)
+tabCamlockActionBtn.TextSize = 11
+tabCamlockActionBtn.Font = Enum.Font.Code
+tabCamlockActionBtn.Parent = bodyChangerCard
+
+tabCamlockActionBtn.MouseButton1Click:Connect(function()
+    getgenv().CamlockConfig.ManualLockActive = not getgenv().CamlockConfig.ManualLockActive
+    if getgenv().CamlockConfig.ManualLockActive then
+        tabCamlockActionBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 30)
+        tabCamlockActionBtn.Text = "[ STATUS: CAMLOCK ENGAGED & LOCKED ]"
+        sendNotification("Camlock engaged onto target successfully.")
+    else
+        tabCamlockActionBtn.BackgroundColor3 = Color3.fromRGB(0, 30, 10)
+        tabCamlockActionBtn.Text = "[ ACTIVATE CAMLOCK ENGAGEMENT ]"
+        sendNotification("Camlock disengaged.")
+    end
+end)
+
+
+-- 2. Visuals & ESP Panel
+local visPanel = panels["Visuals"]
+local visCard = createCard(visPanel, UDim2.new(0, 760, 0, 720), UDim2.new(0, 10, 0, 10))
+local visTitle = Instance.new("TextLabel")
+visTitle.Size = UDim2.new(1, -15, 0, 25)
+visTitle.Position = UDim2.new(0, 10, 0, 8)
+visTitle.BackgroundTransparency = 1
+visTitle.Text = "[+] TACTICAL_VISUALS_KERNEL_CONFIG"
+visTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+visTitle.TextSize = 12
+visTitle.Font = Enum.Font.Code
+visTitle.TextXAlignment = Enum.TextXAlignment.Left
+visTitle.Parent = visCard
+
+createToggle(visCard, "Box ESP Matrix", "BoxESP", 40)
+createColorPicker(visCard, "Box Wireframe Color", "BoxColor", 80)
+
+createToggle(visCard, "Vital Health Bar", "HealthBar", 125)
+createToggle(visCard, "Skeleton Wireframe", "Skeleton", 165)
+createColorPicker(visCard, "Skeleton Vector Color", "SkeletonColor", 205)
+
+createToggle(visCard, "Vector Tracers", "Tracers", 250)
+createColorPicker(visCard, "Tracer Stream Color", "TracerColor", 290)
+
+createToggle(visCard, "Distance Vector Metrics", "DistanceMeters", 335)
+createToggle(visCard, "Raycast Wall Check", "WallCheck", 375)
+
+createToggle(visCard, "Player Identifier Tags", "NameDisplay", 415)
+createColorPicker(visCard, "Tag Color Scheme", "NameColor", 455)
+
+createToggle(visCard, "Global Rainbow Spectrum", "RainbowColors", 500)
+createToggle(visCard, "Self Rainbow Trail Stream", "RainbowTrail", 540)
+createToggle(visCard, "Self Cyber Halo Ring", "RainbowHalo", 580)
+createColorPicker(visCard, "Terminal Background Theme", "ThemeBgColor", 630)
+
+
+-- 3. Configs & Profiles Panel
+local cfgPanel = panels["Configs"]
+local cfgCard = createCard(cfgPanel, UDim2.new(0, 500, 0, 460), UDim2.new(0, 10, 0, 10))
+local cfgTitle = Instance.new("TextLabel")
+cfgTitle.Size = UDim2.new(1, -15, 0, 25)
+cfgTitle.Position = UDim2.new(0, 10, 0, 8)
+cfgTitle.BackgroundTransparency = 1
+cfgTitle.Text = "[+] SYSTEM_CONFIG_STORAGE"
+cfgTitle.TextColor3 = Color3.fromRGB(0, 255, 65)
+cfgTitle.TextSize = 12
+cfgTitle.Font = Enum.Font.Code
+cfgTitle.TextXAlignment = Enum.TextXAlignment.Left
+cfgTitle.Parent = cfgCard
+
+local cfgNameBox = Instance.new("TextBox")
+cfgNameBox.Size = UDim2.new(1, -20, 0, 32)
+cfgNameBox.Position = UDim2.new(0, 10, 0, 40)
+cfgNameBox.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+cfgNameBox.BorderSizePixel = 1
+cfgNameBox.BorderColor3 = Color3.fromRGB(0, 255, 65)
+cfgNameBox.PlaceholderText = "Enter configuration filename..."
+cfgNameBox.Text = getgenv().CamlockConfig.ConfigName
+cfgNameBox.TextColor3 = Color3.fromRGB(0, 255, 65)
+cfgNameBox.TextSize = 11
+cfgNameBox.Font = Enum.Font.Code
+cfgNameBox.Parent = cfgCard
+
+cfgNameBox.FocusLost:Connect(function()
+    getgenv().CamlockConfig.ConfigName = cfgNameBox.Text
+end)
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -20, 0, 32)
+searchBox.Position = UDim2.new(0, 10, 0, 85)
+searchBox.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+searchBox.BorderSizePixel = 1
+searchBox.BorderColor3 = Color3.fromRGB(0, 200, 50)
+searchBox.PlaceholderText = "Search active profiles..."
+searchBox.Text = ""
+searchBox.TextColor3 = Color3.fromRGB(0, 255, 65)
+searchBox.TextSize = 11
+searchBox.Font = Enum.Font.Code
+searchBox.Parent = cfgCard
+
+local configListFrame = Instance.new("ScrollingFrame")
+configListFrame.Size = UDim2.new(1, -20, 0, 100)
+configListFrame.Position = UDim2.new(0, 10, 0, 130)
+configListFrame.BackgroundColor3 = Color3.fromRGB(0, 8, 0)
+configListFrame.BorderSizePixel = 1
+configListFrame.BorderColor3 = Color3.fromRGB(0, 100, 30)
+configListFrame.CanvasSize = UDim2.new(0, 0, 0, 200)
+configListFrame.ScrollBarThickness = 3
+configListFrame.Parent = cfgCard
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 2)
+listLayout.Parent = configListFrame
+
+local function updateConfigList(filter)
+    for _, ch in ipairs(configListFrame:GetChildren()) do
+        if ch:IsA("TextButton") then ch:Destroy() end
+    end
+    for _, cName in ipairs(getgenv().CamlockConfig.SavedConfigs) do
+        if not filter or filter == "" or string.find(cName:lower(), filter:lower()) then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 24)
+            btn.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+            btn.BorderSizePixel = 0
+            btn.Text = " > " .. cName
+            btn.TextColor3 = Color3.fromRGB(150, 255, 150)
+            btn.TextSize = 11
+            btn.Font = Enum.Font.Code
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.Parent = configListFrame
+            btn.MouseButton1Click:Connect(function()
+                cfgNameBox.Text = cName
+                getgenv().CamlockConfig.ConfigName = cName
+            end)
+        end
+    end
+end
+updateConfigList()
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    updateConfigList(searchBox.Text)
+end)
+
+local function createCfgButton(text, yPos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 32)
+    btn.Position = UDim2.new(0, 10, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(0, 255, 65)
+    btn.TextSize = 11
+    btn.Font = Enum.Font.Code
+    btn.Parent = cfgCard
+    btn.MouseButton1Click:Connect(callback)
+end
+
+createCfgButton("[ WRITE PROFILE CONFIG ]", 245, function()
+    local name = getgenv().CamlockConfig.ConfigName
+    if name == "" then name = "root_config" end
+    local exists = false
+    for _, v in ipairs(getgenv().CamlockConfig.SavedConfigs) do
+        if v == name then exists = true end
+    end
+    if not exists then
+        table.insert(getgenv().CamlockConfig.SavedConfigs, name)
+    end
+    updateConfigList()
+    sendNotification("Profile saved: " .. name)
+end)
+
+createCfgButton("[ LOAD PROFILE CONFIG ]", 290, function()
+    sendNotification("Loaded profile: " .. getgenv().CamlockConfig.ConfigName)
+end)
+
+createCfgButton("[ OVERWRITE CONFIG KERNEL ]", 335, function()
+    sendNotification("Overwritten profile data: " .. getgenv().CamlockConfig.ConfigName)
+end)
+
+createColorPicker(cfgCard, "Terminal Text Theme Color", "ThemeTextColor", 390)
+
+-- ==============================================================================
+-- TARGET INFO HUD DISPLAY UI
+-- ==============================================================================
+local targetHud = Instance.new("Frame")
+targetHud.Size = UDim2.new(0, 230, 0, 70)
+targetHud.Position = UDim2.new(0.5, -115, 0, 60)
+targetHud.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+targetHud.BorderSizePixel = 1
+targetHud.BorderColor3 = Color3.fromRGB(0, 255, 65)
+targetHud.Visible = false
+targetHud.Parent = screenGui
+
+local tAvatar = Instance.new("ImageLabel")
+tAvatar.Size = UDim2.new(0, 50, 0, 50)
+tAvatar.Position = UDim2.new(0, 10, 0, 10)
+tAvatar.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+tAvatar.Parent = targetHud
+
+local tNameLbl = Instance.new("TextLabel")
+tNameLbl.Size = UDim2.new(1, -70, 0, 18)
+tNameLbl.Position = UDim2.new(0, 68, 0, 8)
+tNameLbl.BackgroundTransparency = 1
+tNameLbl.TextColor3 = Color3.fromRGB(0, 255, 65)
+tNameLbl.TextSize = 11
+tNameLbl.Font = Enum.Font.Code
+tNameLbl.TextXAlignment = Enum.TextXAlignment.Left
+tNameLbl.Parent = targetHud
+
+local tDetailsLbl = Instance.new("TextLabel")
+tDetailsLbl.Size = UDim2.new(1, -70, 0, 40)
+tDetailsLbl.Position = UDim2.new(0, 68, 0, 26)
+tDetailsLbl.BackgroundTransparency = 1
+tDetailsLbl.TextColor3 = Color3.fromRGB(150, 255, 150)
+tDetailsLbl.TextSize = 10
+tDetailsLbl.Font = Enum.Font.Code
+tDetailsLbl.TextXAlignment = Enum.TextXAlignment.Left
+tDetailsLbl.TextWrapped = true
+tDetailsLbl.Parent = targetHud
+
+-- ==============================================================================
+-- SELF TRAIL & HALO EFFECTS
+-- ==============================================================================
+RunService.Stepped:Connect(function()
+    mainWindow.BackgroundColor3 = getgenv().CamlockConfig.ThemeBgColor
+    sidebar.BackgroundColor3 = getgenv().CamlockConfig.ThemeSidebarColor
+    brandTitle.TextColor3 = getgenv().CamlockConfig.ThemeTextColor
+
+    -- Self Rainbow Trail
+    if getgenv().CamlockConfig.RainbowTrail and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        if not hrp:FindFirstChild("RainbowTrailAtt") then
+            local att1 = Instance.new("Attachment", hrp)
+            att1.Name = "RainbowTrailAtt"
+            local att2 = Instance.new("Attachment", hrp)
+            att2.Position = Vector3.new(0, -3, 0)
+            local trail = Instance.new("Trail", hrp)
+            trail.Name = "CustomRainbowTrail"
+            trail.Attachment0 = att1
+            trail.Attachment1 = att2
+            trail.Lifetime = 0.5
+            trail.Color = ColorSequence.new(Color3.fromHSV(tick() % 5 / 5, 1, 1))
+        else
+            local t = hrp:FindFirstChild("CustomRainbowTrail")
+            if t then
+                t.Color = ColorSequence.new(Color3.fromHSV(tick() % 5 / 5, 1, 1))
+            end
+        end
+    else
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local t = player.Character.HumanoidRootPart:FindFirstChild("CustomRainbowTrail")
+            if t then t:Destroy() end
+        end
+    end
+
+    -- Self Rainbow Halo
+    if getgenv().CamlockConfig.RainbowHalo and player.Character and player.Character:FindFirstChild("Head") then
+        local head = player.Character.Head
+        if not workspace:FindFirstChild("SelfRainbowHalo") then
+            local halo = Instance.new("Part", workspace)
+            halo.Name = "SelfRainbowHalo"
+            halo.Size = Vector3.new(1.2, 0.2, 1.2)
+            halo.Shape = Enum.PartType.Cylinder
+            halo.Anchored = false
+            halo.CanCollide = false
+            local weld = Instance.new("WeldConstraint", halo)
+            weld.Part0 = halo
+            weld.Part1 = head
+            halo.CFrame = head.CFrame + Vector3.new(0, 1, 0)
+        else
+            local halo = workspace:FindFirstChild("SelfRainbowHalo")
+            if halo then
+                halo.Color = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+            end
+        end
+    else
+        local halo = workspace:FindFirstChild("SelfRainbowHalo")
+        if halo then halo:Destroy() end
+    end
+end)
+
+-- ==============================================================================
+-- RENDER & GAMEPLAY ENGINE
+-- ==============================================================================
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 1.5
+fovCircle.NumSides = 64
+fovCircle.Filled = false
+fovCircle.Visible = true
+
+local espCache = {}
+local function createDrawing(type, properties)
+    local obj = Drawing.new(type)
+    for k, v in pairs(properties) do
+        obj[k] = v
+    end
+    return obj
+end
+
+local rainbowHue = 0
+
+RunService.RenderStepped:Connect(function(dt)
+    if getgenv().CamlockConfig.RainbowColors then
+        rainbowHue = (rainbowHue + dt * 0.25) % 1
+    end
+    local globalRainbowCol = Color3.fromHSV(rainbowHue, 1, 1)
+    local activeFOVColor = getgenv().CamlockConfig.RainbowColors and globalRainbowCol or getgenv().CamlockConfig.SilentFOVColor
+
+    fovCircle.Radius = getgenv().CamlockConfig.FOVSize
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Color = activeFOVColor
+    fovCircle.Visible = getgenv().CamlockConfig.MasterSwitch and getgenv().CamlockConfig.SilentAimEnabled and getgenv().CamlockConfig.ShowFOV
+
+    local function isVisible(targetPart)
+        if not getgenv().CamlockConfig.WallCheck then return true end
+        local origin = Camera.CFrame.Position
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = RaycastParams.FilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {player.Character}
+        raycastParams.IgnoreWater = true
+        local result = Workspace:Raycast(origin, targetPart.Position - origin, raycastParams)
+        if result and result.Instance then
+            return result.Instance:IsDescendantOf(targetPart.Parent)
+        end
+        return true
+    end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            local char = p.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            local hum = char:FindFirstChildOfClass("Humanoid")
+
+            if not espCache[p] then
+                espCache[p] = {
+                    Box = createDrawing("Square", {Visible = false, Thickness = 1.5, Filled = false}),
+                    HealthBG = createDrawing("Square", {Visible = false, Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Filled = true}),
+                    HealthBar = createDrawing("Square", {Visible = false, Thickness = 1, Filled = true}),
+                    Tracer = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    HeadDot = createDrawing("Circle", {Visible = false, Thickness = 1, Radius = 3, Filled = true}),
+                    TorsoLine = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    LeftArm = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    RightArm = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    LeftLeg = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    RightLeg = createDrawing("Line", {Visible = false, Thickness = 1}),
+                    NameTag = createDrawing("Text", {Visible = false, Size = 13, Center = true, Outline = true}),
+                }
+            end
+
+            local cache = espCache[p]
+            local boxCol = getgenv().CamlockConfig.RainbowColors and globalRainbowCol or getgenv().CamlockConfig.BoxColor
+            local skelCol = getgenv().CamlockConfig.RainbowColors and globalRainbowCol or getgenv().CamlockConfig.SkeletonColor
+            local tracerCol = getgenv().CamlockConfig.RainbowColors and globalRainbowCol or getgenv().CamlockConfig.TracerColor
+            local nameCol = getgenv().CamlockConfig.RainbowColors and globalRainbowCol or getgenv().CamlockConfig.NameColor
+
+            if hrp and head and hum and hum.Health > 0 then
+                local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+
+                if onScreen and isVisible(head) then
+                    local height = math.abs(headPos.Y - legPos.Y)
+                    local width = height / 2
+                    local boxPos = Vector2.new(hrpPos.X - width / 2, headPos.Y)
+
+                    if getgenv().CamlockConfig.BoxESP then
+                        cache.Box.Size = Vector2.new(width, height)
+                        cache.Box.Position = boxPos
+                        cache.Box.Color = boxCol
+                        cache.Box.Visible = true
+                    else
+                        cache.Box.Visible = false
+                    end
+
+                    if getgenv().CamlockConfig.HealthBar then
+                        local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        cache.HealthBG.Size = Vector2.new(width, 4)
+                        cache.HealthBG.Position = Vector2.new(boxPos.X, boxPos.Y + height + 4)
+                        cache.HealthBG.Visible = true
+
+                        cache.HealthBar.Size = Vector2.new(width * healthPercent, 2)
+                        cache.HealthBar.Position = cache.HealthBG.Position + Vector2.new(1, 1)
+                        cache.HealthBar.Color = Color3.fromRGB(255, (healthPercent * 255), 0)
+                        cache.HealthBar.Visible = true
+                    else
+                        cache.HealthBG.Visible = false
+                        cache.HealthBar.Visible = false
+                    end
+
+                    if getgenv().CamlockConfig.Skeleton then
+                        local lArm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftHand")
+                        local rArm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightHand")
+                        local lLeg = char:FindFirstChild("Left Leg") or char:FindFirstChild("LeftLowerLeg")
+                        local rLeg = char:FindFirstChild("Right Leg") or char:FindFirstChild("RightLowerLeg")
+                        local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+
+                        if head and torso then
+                            local hp = Camera:WorldToViewportPoint(head.Position)
+                            local tp = Camera:WorldToViewportPoint(torso.Position)
+                            cache.HeadDot.Position = Vector2.new(hp.X, hp.Y)
+                            cache.HeadDot.Color = skelCol
+                            cache.HeadDot.Visible = true
+
+                            cache.TorsoLine.From = Vector2.new(hp.X, hp.Y)
+                            cache.TorsoLine.To = Vector2.new(tp.X, tp.Y)
+                            cache.TorsoLine.Color = skelCol
+                            cache.TorsoLine.Visible = true
+
+                            if lArm then
+                                local lap = Camera:WorldToViewportPoint(lArm.Position)
+                                cache.LeftArm.From = Vector2.new(tp.X, tp.Y)
+                                cache.LeftArm.To = Vector2.new(lap.X, lap.Y)
+                                cache.LeftArm.Color = skelCol
+                                cache.LeftArm.Visible = true
+                            end
+                            if rArm then
+                                local rap = Camera:WorldToViewportPoint(rArm.Position)
+                                cache.RightArm.From = Vector2.new(tp.X, tp.Y)
+                                cache.RightArm.To = Vector2.new(rap.X, rap.Y)
+                                cache.RightArm.Color = skelCol
+                                cache.RightArm.Visible = true
+                            end
+                            if lLeg then
+                                local llp = Camera:WorldToViewportPoint(lLeg.Position)
+                                cache.LeftLeg.From = Vector2.new(tp.X, tp.Y)
+                                cache.LeftLeg.To = Vector2.new(llp.X, llp.Y)
+                                cache.LeftLeg.Color = skelCol
+                                cache.LeftLeg.Visible = true
+                            end
+                            if rLeg then
+                                local rlp = Camera:WorldToViewportPoint(rLeg.Position)
+                                cache.RightLeg.From = Vector2.new(tp.X, tp.Y)
+                                cache.RightLeg.To = Vector2.new(rlp.X, rlp.Y)
+                                cache.RightLeg.Color = skelCol
+                                cache.RightLeg.Visible = true
+                            end
+                        end
+                    else
+                        cache.HeadDot.Visible = false
+                        cache.TorsoLine.Visible = false
+                        cache.LeftArm.Visible = false
+                        cache.RightArm.Visible = false
+                        cache.LeftLeg.Visible = false
+                        cache.RightLeg.Visible = false
+                    end
+
+                    if getgenv().CamlockConfig.Tracers then
+                        cache.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        cache.Tracer.To = Vector2.new(hrpPos.X, hrpPos.Y)
+                        cache.Tracer.Color = tracerCol
+                        cache.Tracer.Visible = true
+                    else
+                        cache.Tracer.Visible = false
+                    end
+
+                    if getgenv().CamlockConfig.NameDisplay then
+                        local dist = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude or 0
+                        local distMeters = math.floor(dist * 0.28)
+                        local textDisplay = p.Name
+                        if getgenv().CamlockConfig.DistanceMeters then
+                            textDisplay = textDisplay .. " [" .. tostring(distMeters) .. "m]"
+                        end
+                        cache.NameTag.Text = textDisplay
+                        cache.NameTag.Position = Vector2.new(boxPos.X + (width / 2), boxPos.Y - 18)
+                        cache.NameTag.Color = nameCol
+                        cache.NameTag.Visible = true
+                    else
+                        cache.NameTag.Visible = false
+                    end
+                else
+                    cache.Box.Visible = false
+                    cache.HealthBG.Visible = false
+                    cache.HealthBar.Visible = false
+                    cache.Tracer.Visible = false
+                    cache.HeadDot.Visible = false
+                    cache.TorsoLine.Visible = false
+                    cache.LeftArm.Visible = false
+                    cache.RightArm.Visible = false
+                    cache.LeftLeg.Visible = false
+                    cache.RightLeg.Visible = false
+                    cache.NameTag.Visible = false
+                end
+            else
+                cache.Box.Visible = false
+                cache.HealthBG.Visible = false
+                cache.HealthBar.Visible = false
+                cache.Tracer.Visible = false
+                cache.HeadDot.Visible = false
+                cache.TorsoLine.Visible = false
+                cache.LeftArm.Visible = false
+                cache.RightArm.Visible = false
+                cache.LeftLeg.Visible = false
+                cache.RightLeg.Visible = false
+                cache.NameTag.Visible = false
+            end
+        end
+    end
+
+    if getgenv().CamlockConfig.MasterSwitch then
+        pcall(function()
+            local bestTarget = nil
+            local shortestDist = math.huge
+            local bestPlayer = nil
+            local selectedPartName = getgenv().CamlockConfig.BodyPart or "Head"
+
+            -- Respect explicit target selector if chosen
+            if getgenv().SelectedTargetPlayer and getgenv().SelectedTargetPlayer.Character then
+                local tChar = getgenv().SelectedTargetPlayer.Character
+                local tPart = tChar:FindFirstChild(selectedPartName) or tChar:FindFirstChild("Head")
+                local tHum = tChar:FindFirstChildOfClass("Humanoid")
+                if tPart and tHum and tHum.Health > 0 then
+                    bestTarget = tPart
+                    bestPlayer = getgenv().SelectedTargetPlayer
+                end
+            end
+
+            if not bestTarget then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= player and p.Character then
+                        local targetPart = p.Character:FindFirstChild(selectedPartName) or p.Character:FindFirstChild("Head")
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if targetPart and hum and hum.Health > 0 then
+                            local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                            if onScreen then
+                                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                                local dist = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                                local withinFOV = not getgenv().CamlockConfig.SilentAimEnabled or (dist <= getgenv().CamlockConfig.FOVSize)
+                                if withinFOV and dist < shortestDist then
+                                    shortestDist = dist
+                                    bestTarget = targetPart
+                                    bestPlayer = p
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- If Manual Lock Active or Auto-Lock enabled
+            if getgenv().CamlockConfig.ManualLockActive and bestTarget and bestPlayer then
+                local predictedPos = bestTarget.Position + (bestTarget.AssemblyLinearVelocity * getgenv().CamlockConfig.Prediction)
+                local targetCFrame = CFrame.new(Camera.CFrame.Position, predictedPos)
+                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, getgenv().CamlockConfig.Smoothness)
+            elseif getgenv().CamlockConfig.CamlockEnabled and getgenv().CamlockConfig.AutoCamlock and bestTarget and bestPlayer then
+                local predictedPos = bestTarget.Position + (bestTarget.AssemblyLinearVelocity * getgenv().CamlockConfig.Prediction)
+                local targetCFrame = CFrame.new(Camera.CFrame.Position, predictedPos)
+                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, getgenv().CamlockConfig.Smoothness)
+            end
+
+            if getgenv().CamlockConfig.SilentAimEnabled and getgenv().CamlockConfig.SilentAutoCamlock and bestTarget and bestPlayer then
+                local sDist = (Vector2.new(Camera:WorldToViewportPoint(bestTarget.Position).X, Camera:WorldToViewportPoint(bestTarget.Position).Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                if sDist <= getgenv().CamlockConfig.FOVSize then
+                    local sPredicted = bestTarget.Position + (bestTarget.AssemblyLinearVelocity * getgenv().CamlockConfig.SilentPrediction)
+                    local silentCFrame = CFrame.new(Camera.CFrame.Position, sPredicted)
+                    Camera.CFrame = Camera.CFrame:Lerp(silentCFrame, getgenv().CamlockConfig.SilentSmoothness)
+                end
+            end
+
+            -- Update Target Info HUD Card
+            if bestPlayer and getgenv().CamlockConfig.ShowTargetInfo then
+                targetHud.Visible = true
+                if getgenv().CamlockConfig.TargetInfoAvatar then
+                    tAvatar.Image = "rbxthumb://type=Avatar&id=" .. bestPlayer.UserId .. "&w=150&h=150"
+                else
+                    tAvatar.Image = ""
+                end
+
+                local infoTextLines = {}
+                if getgenv().CamlockConfig.TargetInfoName then
+                    table.insert(infoTextLines, "usr: " .. bestPlayer.Name)
+                end
+                if getgenv().CamlockConfig.TargetInfoDisplay then
+                    table.insert(infoTextLines, "alias: " .. bestPlayer.DisplayName)
+                end
+                if getgenv().CamlockConfig.TargetInfoDist and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and bestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (player.Character.HumanoidRootPart.Position - bestPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    table.insert(infoTextLines, "dist: " .. math.floor(dist * 0.28) .. "m")
+                end
+                if getgenv().CamlockConfig.TargetInfoHealth and bestPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    table.insert(infoTextLines, "hp: " .. math.floor(bestPlayer.Character:FindFirstChildOfClass("Humanoid").Health))
+                end
+
+                tNameLbl.Text = "[TARGET: " .. bestPlayer.Name .. "]"
+                tDetailsLbl.Text = table.concat(infoTextLines, "\n")
+            else
+                targetHud.Visible = false
+            end
+        end)
+    else
+        targetHud.Visible = false
+    end
+end)
