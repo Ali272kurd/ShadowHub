@@ -1,0 +1,744 @@
+-- ==================================================
+-- ALIIIWYDDD MASTER SCRIPT (COMPLETE / ALL 7 PARTS) - BUFIXED
+-- ==================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+if CoreGui:FindFirstChild("AliiwydddMasterGui") then
+    CoreGui.AliiwydddMasterGui:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AliiwydddMasterGui"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = CoreGui
+
+local function makeDraggable(btn)
+    local dragging = false
+    local dragStart, startPos
+
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = btn.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    btn.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+            local delta = input.Position - dragStart
+            btn.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- 1. FPS Counter UI (Draggable)
+local fpsFrame = Instance.new("Frame")
+fpsFrame.Size = UDim2.new(0, 130, 0, 45)
+fpsFrame.Position = UDim2.new(0, 20, 0, 20)
+fpsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+fpsFrame.BackgroundTransparency = 0.2
+fpsFrame.Parent = screenGui
+makeDraggable(fpsFrame)
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 8)
+frameCorner.Parent = fpsFrame
+
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Thickness = 2
+frameStroke.Color = Color3.fromRGB(150, 0, 255)
+frameStroke.Parent = fpsFrame
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(1, 0, 1, 0)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsLabel.TextSize = 16
+fpsLabel.Font = Enum.Font.GothamBold
+fpsLabel.Text = "FPS: 0"
+fpsLabel.Parent = fpsFrame
+
+local lastTick = tick()
+local frameCount = 0
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local currentTick = tick()
+    if currentTick - lastTick >= 1 then
+        local actualFps = math.floor(frameCount / (currentTick - lastTick))
+        fpsLabel.Text = "FPS: " .. tostring(actualFps)
+        frameCount = 0
+        lastTick = currentTick
+    end
+end)
+
+-- 2. Main Camlock Button
+local mainBtn = Instance.new("TextButton")
+mainBtn.Name = "CamlockButton"
+mainBtn.Size = UDim2.new(0, 190, 0, 70)
+mainBtn.Position = UDim2.new(0, 60, 0, 130)
+mainBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+mainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+mainBtn.TextSize = 18
+mainBtn.Font = Enum.Font.GothamBold
+mainBtn.Text = "aliiiwyddd (Q)"
+mainBtn.Active = true
+mainBtn.Parent = screenGui
+makeDraggable(mainBtn)
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 12)
+btnCorner.Parent = mainBtn
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Thickness = 3
+btnStroke.Parent = mainBtn
+
+-- 3. Emote Button (Child of mainBtn so it moves with it)
+local emoteBtn = Instance.new("TextButton")
+emoteBtn.Name = "EmoteButton"
+emoteBtn.Size = UDim2.new(1, 0, 0, 60)
+emoteBtn.Position = UDim2.new(0, 0, 1, 10)
+emoteBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+emoteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+emoteBtn.TextSize = 17
+emoteBtn.Font = Enum.Font.GothamBold
+emoteBtn.Text = "🕺 Emotes (E)"
+emoteBtn.Active = true
+emoteBtn.Parent = mainBtn 
+
+local emoteCorner = Instance.new("UICorner")
+emoteCorner.CornerRadius = UDim.new(0, 12)
+emoteCorner.Parent = emoteBtn
+
+local emoteStroke = Instance.new("UIStroke")
+emoteStroke.Thickness = 2.5
+emoteStroke.Parent = emoteBtn
+
+emoteBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        GuiService:SetEmotesMenuOpen(not GuiService:GetEmotesMenuOpen())
+    end)
+end)
+
+-- 4. Shiftlock Button
+local shiftlockBtn = Instance.new("TextButton")
+shiftlockBtn.Name = "ShiftlockButton"
+shiftlockBtn.Size = UDim2.new(0, 85, 0, 85)
+shiftlockBtn.Position = UDim2.new(0, 300, 0, 130)
+shiftlockBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+shiftlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+shiftlockBtn.TextSize = 26
+shiftlockBtn.Font = Enum.Font.GothamBold
+shiftlockBtn.Text = "🔒"
+shiftlockBtn.Active = true
+shiftlockBtn.Parent = screenGui
+makeDraggable(shiftlockBtn)
+
+local shiftCorner = Instance.new("UICorner")
+shiftCorner.CornerRadius = UDim.new(1, 0)
+shiftCorner.Parent = shiftlockBtn
+
+local shiftStroke = Instance.new("UIStroke")
+shiftStroke.Thickness = 3
+shiftStroke.Parent = shiftlockBtn
+
+-- 5. Reset Button (Child of shiftlockBtn so it moves with it)
+local resetBtn = Instance.new("TextButton")
+resetBtn.Name = "ResetButton"
+resetBtn.Size = UDim2.new(0, 110, 0, 45)
+resetBtn.Position = UDim2.new(0.5, -55, 1, 10)
+resetBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetBtn.TextSize = 13
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.Text = "💀 Reset (R)"
+resetBtn.Active = true
+resetBtn.Parent = shiftlockBtn
+
+local resetCorner = Instance.new("UICorner")
+resetCorner.CornerRadius = UDim.new(0, 8)
+resetCorner.Parent = resetBtn
+
+local resetStroke = Instance.new("UIStroke")
+resetStroke.Thickness = 2
+resetStroke.Parent = resetBtn
+
+resetBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0
+            end
+        end
+    end)
+end)
+
+-- 6. Info / ESP Toggle Button
+local infoToggleBtn = Instance.new("TextButton")
+infoToggleBtn.Name = "InfoToggleBtn"
+infoToggleBtn.Size = UDim2.new(0, 85, 0, 85)
+infoToggleBtn.Position = UDim2.new(0, 400, 0, 130)
+infoToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+infoToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+infoToggleBtn.TextSize = 13
+infoToggleBtn.Font = Enum.Font.GothamBold
+infoToggleBtn.Text = "INFO: OFF (T)"
+infoToggleBtn.Active = true
+infoToggleBtn.Parent = screenGui
+makeDraggable(infoToggleBtn)
+
+local infoCorner = Instance.new("UICorner")
+infoCorner.CornerRadius = UDim.new(1, 0)
+infoCorner.Parent = infoToggleBtn
+
+local infoStroke = Instance.new("UIStroke")
+infoStroke.Thickness = 3
+infoStroke.Color = Color3.fromRGB(150, 0, 255)
+infoStroke.Parent = infoToggleBtn
+
+-- Keybind List Notification Frame (Toggled with J)
+local keypadListFrame = Instance.new("Frame")
+keypadListFrame.Size = UDim2.new(0, 240, 0, 210)
+keypadListFrame.Position = UDim2.new(0, 20, 0, 85)
+keypadListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+keypadListFrame.BackgroundTransparency = 0.15
+keypadListFrame.Visible = false
+keypadListFrame.Parent = screenGui
+makeDraggable(keypadListFrame)
+
+local keypadCorner = Instance.new("UICorner")
+keypadCorner.CornerRadius = UDim.new(0, 10)
+keypadCorner.Parent = keypadListFrame
+
+local keypadStroke = Instance.new("UIStroke")
+keypadStroke.Thickness = 2
+keypadStroke.Color = Color3.fromRGB(150, 0, 255)
+keypadStroke.Parent = keypadListFrame
+
+local keypadTitle = Instance.new("TextLabel")
+keypadTitle.Size = UDim2.new(1, 0, 0, 30)
+keypadTitle.BackgroundTransparency = 1
+keypadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+keypadTitle.TextSize = 15
+keypadTitle.Font = Enum.Font.GothamBold
+keypadTitle.Text = "PC Keybinds (J)"
+keypadTitle.Parent = keypadListFrame
+
+local keypadText = Instance.new("TextLabel")
+keypadText.Size = UDim2.new(1, -16, 1, -35)
+keypadText.Position = UDim2.new(0, 8, 0, 30)
+keypadText.BackgroundTransparency = 1
+keypadText.TextColor3 = Color3.fromRGB(200, 200, 255)
+keypadText.TextSize = 12
+keypadText.Font = Enum.Font.GothamMedium
+keypadText.TextXAlignment = Enum.TextXAlignment.Left
+keypadText.TextYAlignment = Enum.TextYAlignment.Top
+keypadText.TextWrapped = true
+keypadText.Text = "• [Q] : Camlock Toggle\n• [Shift] : Shiftlock Toggle\n• [T] : Info / ESP Toggle\n• [E] : Emotes Menu\n• [R] : Reset Character\n• [RightShift / Ins] : Hide/Show GUI\n• [J] : Toggle Keybinds List"
+keypadText.Parent = keypadListFrame
+
+local shiftlockCursor = Instance.new("ImageLabel")
+shiftlockCursor.Name = "ShiftlockCursor"
+shiftlockCursor.Size = UDim2.new(0, 32, 0, 32)
+shiftlockCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+shiftlockCursor.Position = UDim2.new(0.5, 0, 0.5, 0)
+shiftlockCursor.BackgroundTransparency = 1
+shiftlockCursor.Image = "rbxasset://textures/MouseLockedCursor.png"
+shiftlockCursor.Visible = false
+shiftlockCursor.Parent = screenGui
+
+local shiftlockActive = false
+local infoEnabled = false
+local guiVisible = true
+
+local function toggleShiftlock()
+    shiftlockActive = not shiftlockActive
+    if shiftlockActive then
+        shiftlockBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 120)
+        shiftlockCursor.Visible = true
+        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+    else
+        shiftlockBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        shiftlockCursor.Visible = false
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+    end
+end
+
+shiftlockBtn.MouseButton1Click:Connect(toggleShiftlock)
+
+local function toggleInfo()
+    infoEnabled = not infoEnabled
+    if infoEnabled then
+        infoToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 70)
+        infoToggleBtn.Text = "INFO: ON (T)"
+    else
+        infoToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        infoToggleBtn.Text = "INFO: OFF (T)"
+    end
+end
+
+infoToggleBtn.MouseButton1Click:Connect(toggleInfo)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.Insert then
+        guiVisible = not guiVisible
+        for _, child in ipairs(screenGui:GetChildren()) do
+            if child ~= shiftlockCursor and child.Name ~= "ESP_Container" then
+                if child:IsA("GuiObject") then
+                    child.Visible = guiVisible
+                end
+            end
+        end
+    elseif not gameProcessed then
+        if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+            if input.KeyCode ~= Enum.KeyCode.RightShift then
+                toggleShiftlock()
+            end
+        elseif input.KeyCode == Enum.KeyCode.T then
+            toggleInfo()
+        elseif input.KeyCode == Enum.KeyCode.E then
+            pcall(function()
+                GuiService:SetEmotesMenuOpen(not GuiService:GetEmotesMenuOpen())
+            end)
+        elseif input.KeyCode == Enum.KeyCode.R then
+            pcall(function()
+                local char = player.Character
+                if char then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.Health = 0
+                    end
+                end
+            end)
+        elseif input.KeyCode == Enum.KeyCode.J then
+            keypadListFrame.Visible = not keypadListFrame.Visible
+        end
+    end
+end)
+
+-- Safer Heartbeat handling to prevent stacking task.wait issues
+RunService.Heartbeat:Connect(function()
+    if shiftlockActive then
+        pcall(function()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.I, false, game)
+            RunService.RenderStepped:Wait()
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.I, false, game)
+            RunService.RenderStepped:Wait()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.O, false, game)
+            RunService.RenderStepped:Wait()
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.O, false, game)
+        end)
+    end
+end)
+
+local function getClosestPlayerToCenter()
+    local closestTarget = nil
+    local shortestDistance = math.huge
+    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+
+    local function checkCandidate(char)
+        if char and char ~= player.Character and char:FindFirstChild("Head") then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local headPart = char.Head
+                local screenPoint, onScreen = camera:WorldToViewportPoint(headPart.Position)
+                if onScreen then
+                    local screenPos2D = Vector2.new(screenPoint.X, screenPoint.Y)
+                    local magnitude = (screenPos2D - screenCenter).Magnitude
+                    if magnitude < shortestDistance then
+                        shortestDistance = magnitude
+                        closestTarget = char
+                    end
+                end
+            end
+        end
+    end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            checkCandidate(p.Character)
+        end
+    end
+
+    for _, folderName in ipairs({"Bots", "Bots_1", "NPCs", "Dummies"}) do
+        local folder = workspace:FindFirstChild(folderName)
+        if folder then
+            for _, obj in ipairs(folder:GetChildren()) do
+                checkCandidate(obj)
+            end
+        end
+    end
+
+    return closestTarget
+end
+
+local function hookToolRemotes(tool)
+    for _, desc in ipairs(tool:GetDescendants()) do
+        if desc:IsA("RemoteEvent") then
+            local name = desc.Name:lower()
+            if name:find("shoot") or name:find("fire") or name:find("hit") or name:find("gun") or name:find("bullet") or name:find("dmg") then
+                pcall(function()
+                    local oldFire
+                    oldFire = hookmetamethod(game, "__namecall", function(self, ...)
+                        if self == desc and getnamecallmethod() == "FireServer" then
+                            if camlockActive and lockedTarget and lockedTarget:FindFirstChild("Head") then
+                                local head = lockedTarget.Head
+                                local moveDir = head.AssemblyLinearVelocity or Vector3.new(0,0,0)
+                                if moveDir.Magnitude < 1 then
+                                    moveDir = Vector3.new(0, 0, 0)
+                                else
+                                    moveDir = moveDir.Unit
+                                end
+                                local targetPos = head.Position + (moveDir * 0.5)
+                                local args = {...}
+                                for i, v in ipairs(args) do
+                                    if typeof(v) == "Vector3" then
+                                        args[i] = targetPos
+                                    elseif typeof(v) == "Instance" and (v:IsA("BasePart") or v:IsA("Model")) then
+                                        args[i] = head
+                                    end
+                                end
+                                return oldFire(self, unpack(args))
+                            end
+                        end
+                        return oldFire(self, ...)
+                    end)
+                end)
+            end
+        end
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then
+            hookToolRemotes(child)
+        end
+    end)
+end)
+
+if player.Character and player.Character:FindFirstChildOfClass("Tool") then
+    hookToolRemotes(player.Character:FindFirstChildOfClass("Tool"))
+end
+
+local camlockActive = false
+local lockedTarget = nil
+
+local function toggleCamlock()
+    camlockActive = not camlockActive
+    if camlockActive then
+        lockedTarget = getClosestPlayerToCenter()
+        if not lockedTarget then
+            camlockActive = false
+        end
+    else
+        lockedTarget = nil
+    end
+end
+
+mainBtn.MouseButton1Click:Connect(toggleCamlock)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
+        toggleCamlock()
+    end
+end)
+
+local function getRainbowColor(t)
+    local hue = (t % 5) / 5
+    return Color3.fromHSV(hue, 1, 1)
+end
+
+local espHolder = Instance.new("Folder")
+espHolder.Name = "ESP_Container"
+espHolder.Parent = screenGui
+
+local boxOutline = Instance.new("Frame")
+boxOutline.BackgroundTransparency = 1
+boxOutline.Visible = false
+boxOutline.Parent = espHolder
+
+local boxStroke = Instance.new("UIStroke")
+boxStroke.Thickness = 2
+boxStroke.Parent = boxOutline
+
+local healthBarBg = Instance.new("Frame")
+healthBarBg.Size = UDim2.new(0, 4, 0, 0)
+healthBarBg.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+healthBarBg.BorderSizePixel = 0
+healthBarBg.Visible = false
+healthBarBg.Parent = espHolder
+
+local healthBarFill = Instance.new("Frame")
+healthBarFill.Size = UDim2.new(1, 0, 1, 0)
+healthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+healthBarFill.BorderSizePixel = 0
+healthBarFill.Parent = healthBarBg
+
+local infoCard = Instance.new("Frame")
+infoCard.Size = UDim2.new(0, 150, 0, 48)
+infoCard.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+infoCard.BackgroundTransparency = 0.2
+infoCard.Visible = false
+infoCard.Parent = espHolder
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 6)
+cardCorner.Parent = infoCard
+
+local cardStroke = Instance.new("UIStroke")
+cardStroke.Thickness = 1.5
+cardStroke.Parent = infoCard
+
+local nameLabel = Instance.new("TextLabel")
+nameLabel.Size = UDim2.new(1, -8, 0, 20)
+nameLabel.Position = UDim2.new(0, 4, 0, 3)
+nameLabel.BackgroundTransparency = 1
+nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+nameLabel.TextSize = 12
+nameLabel.Font = Enum.Font.GothamBold
+nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+nameLabel.Parent = infoCard
+
+local detailsLabel = Instance.new("TextLabel")
+detailsLabel.Size = UDim2.new(1, -8, 0, 20)
+detailsLabel.Position = UDim2.new(0, 4, 0, 22)
+detailsLabel.BackgroundTransparency = 1
+detailsLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
+detailsLabel.TextSize = 10
+detailsLabel.Font = Enum.Font.GothamMedium
+detailsLabel.TextXAlignment = Enum.TextXAlignment.Left
+detailsLabel.Parent = infoCard
+
+local avatarHeadImg = Instance.new("ImageLabel")
+avatarHeadImg.Size = UDim2.new(0, 36, 0, 36)
+avatarHeadImg.AnchorPoint = Vector2.new(0.5, 1)
+avatarHeadImg.BackgroundTransparency = 1
+avatarHeadImg.Visible = false
+avatarHeadImg.Parent = espHolder
+
+local avatarCorner = Instance.new("UICorner")
+avatarCorner.CornerRadius = UDim.new(1, 0)
+avatarCorner.Parent = avatarHeadImg
+
+local avatarStroke = Instance.new("UIStroke")
+avatarStroke.Thickness = 2
+avatarStroke.Parent = avatarHeadImg
+
+pcall(function()
+    local content, ready = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    if ready then
+        avatarHeadImg.Image = content
+    end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+    local rainbowColor = getRainbowColor(tick())
+    btnStroke.Color = rainbowColor
+    emoteStroke.Color = rainbowColor
+    shiftStroke.Color = rainbowColor
+    resetStroke.Color = rainbowColor
+    infoStroke.Color = rainbowColor
+    keypadStroke.Color = rainbowColor
+    boxStroke.Color = rainbowColor
+    cardStroke.Color = rainbowColor
+    avatarStroke.Color = rainbowColor
+
+    if shiftlockActive then
+        pcall(function()
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+                local hrp = char.HumanoidRootPart
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                
+                if camera.CameraMaxZoomDistance < 2 then
+                    camera.CameraMaxZoomDistance = 15
+                end
+                
+                local camRot = camera.CFrame - camera.CFrame.Position
+                local targetCamPos = hrp.Position + Vector3.new(0, 1.5, 0) + (camRot * Vector3.new(1.75, 0.4, 4.5))
+                camera.CFrame = CFrame.new(targetCamPos, targetCamPos + camRot.LookVector)
+                
+                local _, camY, _ = camera.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, camY, 0)
+                humanoid.AutoRotate = false
+            end
+        end)
+    else
+        pcall(function()
+            local char = player.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.AutoRotate = true
+                end
+            end
+        end)
+    end
+
+    if camlockActive then
+        if not lockedTarget or not lockedTarget.Parent or not lockedTarget:FindFirstChild("Head") then
+            lockedTarget = getClosestPlayerToCenter()
+        end
+
+        if lockedTarget and lockedTarget:FindFirstChild("Head") then
+            local humanoid = lockedTarget:FindFirstChildOfClass("Humanoid")
+            local headPart = lockedTarget.Head
+            
+            if humanoid and humanoid.Health > 0 then
+                local moveDir = headPart.AssemblyLinearVelocity or Vector3.new(0,0,0)
+                if moveDir.Magnitude < 1 then
+                    moveDir = Vector3.new(0, 0, 0)
+                else
+                    moveDir = moveDir.Unit
+                end
+                
+                local predictedPosition = headPart.Position + (moveDir * 0.5)
+                camera.CFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
+
+                if infoEnabled then
+                    local headScreenPos, onScreen = camera:WorldToViewportPoint(headPart.Position + Vector3.new(0, 0.8, 0))
+                    local rootPart = lockedTarget:FindFirstChild("HumanoidRootPart")
+                    local rootPos = rootPart and rootPart.Position or headPart.Position
+                    local rootScreenPos, rootOnScreen = camera:WorldToViewportPoint(rootPos)
+
+                    if onScreen and rootOnScreen then
+                        local height = math.abs(headScreenPos.Y - rootScreenPos.Y) * 2.4
+                        local width = height * 0.65
+                        local h = math.clamp(height, 35, 900)
+                        local w = math.clamp(width, 25, 600)
+
+                        boxOutline.Size = UDim2.new(0, w, 0, h)
+                        boxOutline.Position = UDim2.new(0, rootScreenPos.X - w/2, 0, rootScreenPos.Y - h/2)
+                        boxOutline.Visible = true
+
+                        local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        healthBarBg.Size = UDim2.new(0, 4, 0, h)
+                        healthBarBg.Position = UDim2.new(0, rootScreenPos.X - w/2 - 7, 0, rootScreenPos.Y - h/2)
+                        healthBarFill.Size = UDim2.new(1, 0, healthPercent, 0)
+                        healthBarFill.Position = UDim2.new(0, 0, 1 - healthPercent, 0)
+                        healthBarBg.Visible = true
+
+                        nameLabel.Text = lockedTarget.Name
+                        local dist = math.floor((camera.CFrame.Position - headPart.Position).Magnitude)
+                        detailsLabel.Text = string.format("HP: %d/%d | Dist: %dm", math.floor(humanoid.Health), math.floor(humanoid.MaxHealth), dist)
+
+                        infoCard.Position = UDim2.new(0, rootScreenPos.X + w/2 + 8, 0, rootScreenPos.Y - h/2)
+                        infoCard.Visible = true
+
+                        avatarHeadImg.Position = UDim2.new(0, headScreenPos.X, 0, headScreenPos.Y - 22)
+                        avatarHeadImg.Visible = true
+                    else
+                        boxOutline.Visible = false
+                        healthBarBg.Visible = false
+                        infoCard.Visible = false
+                        avatarHeadImg.Visible = false
+                    end
+                else
+                    boxOutline.Visible = false
+                    healthBarBg.Visible = false
+                    infoCard.Visible = false
+                    avatarHeadImg.Visible = false
+                end
+            else
+                boxOutline.Visible = false
+                healthBarBg.Visible = false
+                infoCard.Visible = false
+                avatarHeadImg.Visible = false
+                lockedTarget = getClosestPlayerToCenter()
+            end
+        else
+            boxOutline.Visible = false
+            healthBarBg.Visible = false
+            infoCard.Visible = false
+            avatarHeadImg.Visible = false
+        end
+    else
+        boxOutline.Visible = false
+        healthBarBg.Visible = false
+        infoCard.Visible = false
+        avatarHeadImg.Visible = false
+    end
+end)
+
+pcall(function()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    settings().Rendering.EagerBulkExecution = false
+    
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 1
+    Lighting.FogEnd = 9e9
+    Lighting.ClockTime = 12
+    
+    if Terrain then
+        Terrain.WaterWaveSize = 0
+        Terrain.WaterWaveSpeed = 0
+        Terrain.WaterTransparency = 0
+        Terrain.WaterReflectance = 0
+        Terrain.Decoration = false
+    end
+
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") then
+            v.Enabled = false
+        end
+    end
+
+    local function applyPotato(v)
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+            v.CastShadow = false
+            v.Color = Color3.fromRGB(math.floor(v.Color.R * 255 / 64) * 64, math.floor(v.Color.G * 255 / 64) * 64, math.floor(v.Color.B * 255 / 64) * 64)
+        elseif v:IsA("Texture") or v:IsA("Decal") then
+            v.Transparency = 1
+        elseif v:IsA("SpecialMesh") then
+            v.TextureId = ""
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") or v:IsA("Beam") then
+            v.Enabled = false
+        end
+    end
+
+    for _, v in ipairs(workspace:GetDescendants()) do
+        applyPotato(v)
+    end
+
+    workspace.DescendantAdded:Connect(applyPotato)
+end)
+
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Potato Graphics Loaded!",
+        Text = "Done! Follow TikTok: .vfsv",
+        Duration = 5
+    })
+end)
+
+print("✅ ALIIIWYDDD MASTER SCRIPT LOADED SUCCESSFULLY! | TikTok: .vfsv")
